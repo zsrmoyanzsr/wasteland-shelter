@@ -1,0 +1,43 @@
+[
+  {"type":"log","msg":"========== 真实玩家全流程 =========="},
+  {"type":"click","x":280,"y":461},
+  {"type":"wait","ms":250},
+  {"type":"screenshot","name":"p-01-base"},
+  {"type":"state","name":"p-start"},
+
+  {"type":"log","msg":"A. 建造发电机"},
+  {"type":"click","x":338,"y":322},
+  {"type":"wait","ms":150},
+  {"type":"click","x":140,"y":460},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"p-02-built-gen"},
+  {"type":"state","name":"p-after-gen"},
+
+  {"type":"log","msg":"B. 分配居民到农场"},
+  {"type":"click","x":280,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"p-03-roster"},
+  {"type":"click","x":60,"y":150},
+  {"type":"wait","ms":150},
+  {"type":"screenshot","name":"p-04-detail"},
+  {"type":"click","x":125,"y":520},
+  {"type":"wait","ms":150},
+  {"type":"screenshot","name":"p-05-assign"},
+  {"type":"click","x":135,"y":330},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"p-06-assigned"},
+  {"type":"state","name":"p-assigned"},
+
+  {"type":"log","msg":"C. 推进时间看产能变化"},
+  {"type":"advance","ms":15000},
+  {"type":"click","x":56,"y":685},
+  {"type":"wait","ms":150},
+  {"type":"screenshot","name":"p-07-base-after-15s"},
+  {"type":"state","name":"p-after-15s"},
+
+  {"type":"log","msg":"D. 任务页查看"},
+  {"type":"click","x":504,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"p-08-tasks"},
+  {"type":"state","name":"p-tasks"}
+]

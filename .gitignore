@@ -1,0 +1,6 @@
+node_modules/
+dist/
+output/
+shots_ui/
+shot_map_*.png
+*.log

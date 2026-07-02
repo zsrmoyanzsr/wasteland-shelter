@@ -1,0 +1,42 @@
+[
+  {"type":"log","msg":"===== 全屏展示所有系统 ====="},
+  {"type":"click","x":280,"y":461},
+  {"type":"wait","ms":250},
+  {"type":"screenshot","name":"show-01-base"},
+
+  {"type":"log","msg":"基地-升级模态"},
+  {"type":"click","x":30,"y":238},
+  {"type":"wait","ms":150},
+  {"type":"screenshot","name":"show-02-upgrade-modal"},
+  {"type":"click","x":280,"y":360},
+  {"type":"wait","ms":100},
+
+  {"type":"log","msg":"地图屏"},
+  {"type":"click","x":168,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"show-03-map"},
+  {"type":"click","x":420,"y":380},
+  {"type":"advance","ms":6000},
+  {"type":"screenshot","name":"show-04-map-explored"},
+  {"type":"state","name":"show-map"},
+
+  {"type":"log","msg":"居民屏"},
+  {"type":"click","x":280,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"show-05-roster"},
+  {"type":"click","x":60,"y":150},
+  {"type":"wait","ms":150},
+  {"type":"screenshot","name":"show-06-roster-detail"},
+  {"type":"click","x":280,"y":360},
+  {"type":"wait","ms":100},
+
+  {"type":"log","msg":"派遣屏"},
+  {"type":"click","x":392,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"show-07-dispatch"},
+
+  {"type":"log","msg":"任务屏"},
+  {"type":"click","x":504,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"show-08-tasks"}
+]

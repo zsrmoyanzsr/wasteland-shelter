@@ -1,0 +1,12 @@
+[
+  {"type":"log","msg":"开始: 验证开始屏 + 点击开始新游戏"},
+  {"type":"screenshot","name":"01-start"},
+  {"type":"click","x":280,"y":461},
+  {"type":"wait","ms":300},
+  {"type":"screenshot","name":"02-base"},
+  {"type":"state","name":"base"},
+  {"type":"log","msg":"推进时间, 验证资源 tick 产出"},
+  {"type":"advance","ms":5000},
+  {"type":"screenshot","name":"03-base-after-tick"},
+  {"type":"state","name":"base-after-tick"}
+]

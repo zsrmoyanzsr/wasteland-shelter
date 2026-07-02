@@ -1,0 +1,34 @@
+[
+  {"type":"log","msg":"=== 全循环 E2E ==="},
+  {"type":"click","x":280,"y":461},
+  {"type":"wait","ms":250},
+  {"type":"screenshot","name":"e2e-01-base"},
+  {"type":"state","name":"e2e-start"},
+
+  {"type":"log","msg":"-- A. 建造工坊 --"},
+  {"type":"click","x":240,"y":322},
+  {"type":"wait","ms":150},
+  {"type":"screenshot","name":"e2e-02-build-modal"},
+  {"type":"click","x":140,"y":460},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"e2e-03-built"},
+  {"type":"state","name":"e2e-after-build"},
+
+  {"type":"log","msg":"-- B. 去地图行走揭雾 --"},
+  {"type":"click","x":168,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"e2e-04-map-init"},
+  {"type":"state","name":"e2e-map-init"},
+  {"type":"click","x":400,"y":360},
+  {"type":"advance","ms":4000},
+  {"type":"click","x":450,"y":330},
+  {"type":"advance","ms":4000},
+  {"type":"screenshot","name":"e2e-05-map-walked"},
+  {"type":"state","name":"e2e-map-walked"},
+
+  {"type":"log","msg":"-- C. 去派遣 --"},
+  {"type":"click","x":392,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"e2e-06-dispatch"},
+  {"type":"state","name":"e2e-dispatch"}
+]

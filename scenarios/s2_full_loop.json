@@ -1,0 +1,24 @@
+[
+  {"type":"log","msg":"=== 全循环测试 ==="},
+  {"type":"click","x":280,"y":461},
+  {"type":"wait","ms":300},
+  {"type":"screenshot","name":"10-base"},
+
+  {"type":"log","msg":"1. 建造工坊: 先点建造菜单里的工坊卡片(build panel 起始 x≈26, y≈起)"},
+  {"type":"click","x":73,"y":560},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"11-build-workshop-modal"},
+  {"type":"state","name":"modal1"},
+
+  {"type":"log","msg":"2. 确认建造(模态框 确认建造按钮)"},
+  {"type":"click","x":115,"y":600},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"12-after-build"},
+  {"type":"state","name":"after-build"},
+
+  {"type":"log","msg":"3. 切换到居民页"},
+  {"type":"click","x":280,"y":685},
+  {"type":"wait","ms":200},
+  {"type":"screenshot","name":"13-roster"},
+  {"type":"state","name":"roster"}
+]
