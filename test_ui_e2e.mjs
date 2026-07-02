@@ -175,14 +175,34 @@ st = await snap();
 T("UI: 地图行走可触发探索事件", st.modal === "exploreEvent" || st.map.player, "modal=" + st.modal);
 if (st.modal === "exploreEvent") {
   await page.screenshot({ path: `${SHOT_DIR}/11_explore_event.png` });
-  // 探索事件选项: mx=30,选项区 x=mx+24+12=66, 宽312; 第一个选项中心约 (210, my+170)
-  // my动态,取屏幕中部偏下。选项高度56,首个约在 my+78+文本行*20+8 处。保守用 380
-  await clickAt(210, 380);
+  // 探索事件模态动态高度: mw=360,mx=30,mh=72+lines*20+18+choices*62+24
+  // 精确计算第一个选项中心 y: my + 78 + lines*20 + 8 + 28 (选项高56,中心+28)
+  const choiceY = await page.evaluate(async () => {
+    const ev = await import("/src/content/exploreEvents.js");
+    const m = window.__game.state.modal;
+    const e = ev.EXPLORE_EVENTS.find((x) => x.id === m.eventId);
+    const lines = e.text.length; // 粗略,实际按字符宽度换行,这里取足够大的范围
+    // 重新精确计算: 模拟 wrap 逻辑确定行数
+    const ctx = document.querySelector("canvas").getContext("2d");
+    ctx.font = `400 13px sans-serif`;
+    let lineCount = 1, cur = "";
+    for (const ch of e.text) {
+      if (ctx.measureText(cur + ch).width > 360 - 48 && cur) { lineCount++; cur = ch; }
+      else cur += ch;
+    }
+    const mh = 72 + lineCount * 20 + 18 + e.choices.length * 62 + 24;
+    const my = Math.max(20, (760 - mh) / 2);
+    // 第一个选项 y 起点 = my + 78 + lineCount*20 + 8; 中心 +28
+    const firstChoiceCenterY = my + 78 + lineCount * 20 + 8 + 28;
+    return { firstChoiceCenterY, lineCount, my, mh };
+  });
+  // 在第一个选项中心点击(x=30+180=210 居中)
+  await clickAt(210, choiceY.firstChoiceCenterY);
   st = await snap();
-  T("UI: 探索事件选择后关闭", st.modal === null, "modal=" + st.modal);
+  T("UI: 探索事件选择后关闭", st.modal === null, `modal=${st.modal} y=${choiceY.firstChoiceCenterY?.toFixed(0)}`);
   if (st.modal === "exploreEvent") {
-    // 再尝试更低位置
-    await clickAt(210, 440);
+    // 兜底: 尝试第二个选项(更下方)
+    await clickAt(210, choiceY.firstChoiceCenterY + 62);
     st = await snap();
     T("UI: 探索事件选择后关闭(重试)", st.modal === null, "modal=" + st.modal);
   }

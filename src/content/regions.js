@@ -316,20 +316,21 @@ export function revealCellAndNeighbors(map, gx, gy) {
       map.cells[idx] = CELL.REVEALED;
     }
   };
-  // 踏足格直接 VISITED (无论之前是HIDDEN还是REVEALED,首次踏足都算)
-  const idx = gy * map.gridW + gx;
-  if (gx >= 0 && gy >= 0 && gx < map.gridW && gy < map.gridH) {
-    if (map.cells[idx] !== CELL.VISITED) {
-      map.cells[idx] = CELL.VISITED;
-      return { newlyVisited: true }; // 首次踏足(无论之前是否揭示过)
-    }
+  // 越界保护
+  if (gx < 0 || gy < 0 || gx >= map.gridW || gy >= map.gridH) {
+    return { newlyVisited: false };
   }
-  // 揭示上下左右
+  const idx = gy * map.gridW + gx;
+  // 记录是否首次踏足(无论之前是 HIDDEN 还是 REVEALED)
+  const newlyVisited = map.cells[idx] !== CELL.VISITED;
+  // 踏足格直接 VISITED
+  map.cells[idx] = CELL.VISITED;
+  // 揭示上下左右(必须放在 return 之前,否则首次踏足时相邻格永远不揭示)
   setCell(gx + 1, gy);
   setCell(gx - 1, gy);
   setCell(gx, gy + 1);
   setCell(gx, gy - 1);
-  return { newlyVisited: false };
+  return { newlyVisited };
 }
 
 // 检查 POI 是否已被踏足发现(在 VISITED 格上)

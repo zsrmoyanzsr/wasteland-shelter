@@ -115,9 +115,11 @@ function drawExpeditionCard(ctx, ui, state, e, x, y, w, h, isDone) {
   });
 
   if (e.state === "running") {
-    const prog = Math.min(1, (state.time - e.startAt) / e.duration);
+    const elapsed = state.time - e.startAt;
+    const prog = Math.min(1, elapsed / e.duration);
     progressBar(ctx, x + 52, y + 46, w - 70, 8, prog, { color: T.info });
-    text(ctx, `${Math.floor((1 - prog) * (e.duration - (state.time - e.startAt)) + 0)}s`, x + w - 14, y + h / 2, {
+    const remain = Math.max(0, e.duration - elapsed); // 剩余秒数,不为负
+    text(ctx, `${Math.ceil(remain)}s`, x + w - 14, y + h / 2, {
       size: T.fontXs,
       color: T.text,
       align: "right",
@@ -157,10 +159,11 @@ function drawRegionCard(ctx, ui, state, poi, x, y, w, h) {
     size: T.fontXs,
     color: T.accent,
   });
-  // 主要产出
+  // 主要产出(按 rewards 范围取该区域可能产出的资源图标)
   let loot = "";
-  for (const k in info.loot) {
-    if (info.loot[k] === "high") loot += RESOURCES[k].icon + " ";
+  for (const k in info.rewards) {
+    const r = RESOURCES[k];
+    if (r) loot += r.icon + " ";
   }
   text(ctx, `产出 ${looot(loot)}`, x + 60, y + 50, { size: T.fontXs, color: T.primary });
   // 时长
@@ -169,9 +172,8 @@ function drawRegionCard(ctx, ui, state, poi, x, y, w, h) {
     color: T.textDim,
     align: "right",
   });
-  // 派遣按钮
-  const freeCount = state.survivors.filter((s) => !s.busy && !s.assigned && s.busy !== "dead" && s.health >= 30).length;
-  // 也允许分配中的去? 简化: 只允许完全空闲
+  // 派遣: 允许空闲 + 分配中的幸存者(组队时自动从原设施调离),重伤/派遣中除外
+  const freeCount = state.survivors.filter((s) => !s.busy && s.busy !== "dead" && s.health >= 30).length;
   const can = freeCount > 0;
   fillRoundRect(ctx, x + w - 70, y + h - 30, 58, 22, 11, can ? T.primary : T.panelHi);
   text(ctx, can ? "派遣 ➜" : "无人", x + w - 41, y + h - 19, {
@@ -180,8 +182,14 @@ function drawRegionCard(ctx, ui, state, poi, x, y, w, h) {
     align: "center",
     weight: "700",
   });
-  if (hover && ui.pointer.pressed && can) {
-    state.modal = { type: "formTeam", poi };
+  if (hover && ui.pointer.pressed) {
+    if (can) {
+      state.modal = { type: "formTeam", poi };
+    } else {
+      // 无可派人手时给明确提示,避免玩家不知道为何卡住
+      addLog(state, "没有可派遣的幸存者。重伤(血<30)需先在医疗室治疗,或升级基地增加人口。", T.danger);
+      addFloat(state, x + w / 2, y, "暂无可派人手", T.danger);
+    }
     ui.pointer.pressed = false;
   }
 }
@@ -228,18 +236,18 @@ export function drawTeamModal(ctx, ui, state, W, H) {
     weight: "600",
   });
 
-  // 可选幸存者(空闲且未派遣,且非重伤)
-  const free = state.survivors.filter((s) => !s.busy && s.busy !== "dead" && !s.assigned && s.health >= 30);
+  // 可选幸存者: 空闲 + 工作中均可(工作中者出发时自动从原设施调离),重伤/派遣中除外
+  const free = state.survivors.filter((s) => !s.busy && s.busy !== "dead" && s.health >= 30);
   let yy = my + 142;
   clipRound(ctx, mx + 20, yy, mw - 40, 200, T.radiusSm, () => {
     let cy = yy;
     if (free.length === 0) {
-      text(ctx, "没有空闲的幸存者", mx + mw / 2, cy + 20, {
+      text(ctx, "没有可派遣的幸存者", mx + mw / 2, cy + 20, {
         size: T.fontSm,
         color: T.textMute,
         align: "center",
       });
-      text(ctx, "(居民需未分配工作且未派遣)", mx + mw / 2, cy + 40, {
+      text(ctx, "(重伤需先治疗,所有人都已派遣中?)", mx + mw / 2, cy + 40, {
         size: T.fontXs,
         color: T.textMute,
         align: "center",
@@ -262,9 +270,11 @@ export function drawTeamModal(ctx, ui, state, W, H) {
       );
       icon(ctx, s.profIcon, mx + 40, cy + 22, 20);
       text(ctx, s.name, mx + 60, cy + 8, { size: T.fontSm, color: T.text, weight: "600" });
-      text(ctx, `${s.profName} Lv.${s.level} ❤️${Math.floor(s.health)}`, mx + 60, cy + 24, {
+      // 标注工作中者(出发时自动调离)
+      const workTag = s.assigned ? " · 工作中" : "";
+      text(ctx, `${s.profName} Lv.${s.level} ❤️${Math.floor(s.health)}${workTag}`, mx + 60, cy + 24, {
         size: T.fontXs,
-        color: T.textDim,
+        color: s.assigned ? T.accent : T.textDim,
       });
       // 特长
       if (s.perks) {
@@ -344,8 +354,15 @@ function launchExpedition(state, poi, members) {
     rewards: {},
   };
   state.expeditions.push(exp);
-  // 标记成员忙碌
-  for (const m of members) m.busy = "expedition";
+  // 标记成员忙碌,并从原设施调离(派遣期间设施不再计其产能)
+  for (const m of members) {
+    if (m.assigned) {
+      const f = state.base.facilities.find((fac) => fac.id === m.assigned);
+      if (f) f.assigned = (f.assigned || []).filter((id) => id !== m.id);
+      m.assigned = null;
+    }
+    m.busy = "expedition";
+  }
 }
 
 // 每帧更新探索(到时间结算事件)
@@ -379,12 +396,13 @@ function settleExpedition(state, e) {
     e.event = rollEvent(rng);
     e.state = "event"; // 等待玩家抉择
   } else {
-    // 直接完成
+    // 直接完成(无事件)
     e.state = "done";
-    // 立即发奖(无事件)
+    // 立即发奖
     applyRewards(state, baseRewards);
-    // 成员 XP
+    // 成员释放 + XP (与 resolveEvent 分支保持一致,避免成员永久卡 busy)
     for (const m of members) {
+      m.busy = null;
       m.xp += 20;
       while (m.xp >= m.xpNeed) {
         m.xp -= m.xpNeed;
@@ -392,6 +410,7 @@ function settleExpedition(state, e) {
         else { m.level += 1; m.xpNeed = xpForLevelLocal(m.level); }
       }
     }
+    state.stats.expeditionsDone++;
   }
 }
 

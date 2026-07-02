@@ -349,3 +349,64 @@ prompt 模板: `"anime style, {角色描述}, post apocalyptic survivor, head po
 - `public/img/tiles/{ruins,tree,rock,crater,cache}.png` — 5个AI图标
 - `test_logic.mjs` — 事件数量断言更新
 - `shot_map.mjs` — 地图截图验证脚本(新增)
+
+## v2.2.1 深度测试 + 6个bug修复 (本轮)
+
+> 对全部26个模块逐行审查 + 新增2套测试(test_deep 37项 / test_ui_e2e 27项),
+> 发现并修复了原有40项测试漏掉的6个bug。**4套测试共104项全过,全程无console error。**
+
+### 修复的bug(按严重度)
+
+#### Bug1【严重】网格探索永不揭示相邻格 — regions.js revealCellAndNeighbors
+- **问题**: 首次踏足新格时,`if (map.cells[idx] !== VISITED)` 分支直接 `return {newlyVisited:true}`,
+  **提前返回,跳过了下面的"揭示上下左右相邻格"代码**。导致相邻格永远保持HIDDEN。
+- **影响**: "已揭示(虚线半透明)"状态在真实游戏中几乎不存在;v2.2新增的废土装饰图标
+  (只画在REVEALED/VISITED格上)几乎看不到;地图揭示极慢。AI视觉分析地图截图确认:
+  玩家行走后只有1个VISITED格+3-4个入口预标记的REVEALED格。
+- **修复**: 先揭示相邻格、再返回newlyVisited标志,不在首次踏足分支提前return。
+- **验证**: test_deep "revealCellAndNeighbors相邻格→REVEALED" ✅
+
+#### Bug2【严重】派遣无事件分支不释放成员/不计派遣次数 — screenDispatch.js settleExpedition
+- **问题**: 派遣结算30%走"无事件"分支(else),设了state="done"+发奖+加XP,但漏写:
+  `member.busy=null`(成员永久卡"派遣中") 和 `stats.expeditionsDone++`。
+- **影响**: ~30%派遣会让幸存者永久无法再分配/派遣;任务"完成5次派遣"、成就"老兵探险家"
+  永远无法达成;滚雪球恶化。只有走"事件分支"由玩家手动抉择后才正确释放。
+- **修复**: else分支补上成员释放 + expeditionsDone++(与resolveEvent分支对齐)。
+- **验证**: test_deep "派遣完整流程成员被释放/派遣次数+1" ✅
+
+#### Bug3【中】派遣区"产出"列永远为空 — screenDispatch.js drawRegionCard
+- **问题**: 代码访问 `info.loot`,但 POI_TYPES 只有 `rewards` 字段,无 `loot`。
+  `for(k in info.loot)` 因undefined不迭代,产出列永远显示"—"。
+- **修复**: 改用 `info.rewards`,展示该区域可能产出的资源图标。
+
+#### Bug4【中】开局无人可派遣 — screenDispatch.js
+- **问题**: 派遣只允许 `!s.assigned`(完全空闲)的幸存者;开局2人全分配到farm/well,
+  派遣入口一直显示"无人",新手卡点且无引导。
+- **修复**: 放宽为"空闲+工作中均可参加"(工作中者出发时自动从原设施调离);
+  "无人"时点击给明确提示(重伤需治疗/升级基地扩容)。
+
+#### Bug5【低】居民食物消耗误算派遣中的幸存者 — economy.js:76
+- **问题**: `filter((s) => !s.busy || s.busy !== "dead")` 条件永真(等价于全部),
+  应为 `s.busy !== "dead"`。
+- **修复**: 改为 `s.busy !== "dead"`(注:派遣中居民仍驻扎基地,照常消耗,语义合理)。
+
+#### Bug6【低·边界】空数组的tasks/achievements老存档不重建 — save.js
+- **问题**: `if (!Array.isArray(s.tasks))` 对空数组 `[]` 为false,不重建。
+  老存档若恰好存了空数组,迁移后任务/成就列表为空。
+- **修复**: 改为 `!Array.isArray(...) || length === 0`,空数组也重建。
+
+### 清理的代码债
+- economy.js `checkAutoTasks` 死代码(空函数从未调用)删除
+- screenDispatch.js 倒计时公式修正(原 `(1-prog)*(duration-elapsed)` 逻辑错误,改 `Math.max(0, duration-elapsed)`)
+- screenBase.js 冗余赋值 `state.modal = {type:"buildFacility_close"}` 删除
+- survivors.js 注释"升满5级时"修正为"每3级"(代码是 `level%3===0`)
+
+### 测试体系
+- **新增 test_deep.mjs (37项)**: 覆盖盲区 — 幸存者养成/任务领奖/成就/存档迁移v1→v2/
+  损坏备份恢复/派遣事件resolve/事件权重分布/网格揭示/传送/cellEventHash/离线上限/派遣全流程/30天长跑
+- **新增 test_ui_e2e.mjs (27项)**: UI端到端 — 5屏导航/6类模态/建造/升级/分配/地图行走/
+  探索事件/招募/派遣组队/模态防穿透/F全屏,含精确指针模拟点击
+- **4套测试共104项全过**: test_logic(26) + test_edge(14) + test_deep(37) + test_ui_e2e(27)
+- 关键改进: 测试从"只断言主路径成功"升级为"断言副作用完整"(如验证相邻格状态、成员释放),
+  这是发现Bug1/2的关键
+- git仓库已初始化,基线提交 52fa30e

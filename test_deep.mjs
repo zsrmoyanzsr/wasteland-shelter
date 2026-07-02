@@ -196,8 +196,8 @@ T("存档迁移: version升到2", migrateTest.version === 2, "version=" + migrat
 T("存档迁移: 老map→新maps结构", migrateTest.hasMaps && migrateTest.mapRemoved, `hasMaps=${migrateTest.hasMaps} mapRemoved=${migrateTest.mapRemoved}`);
 T("存档迁移: player补全health", migrateTest.hasHealth, "");
 T("存档迁移: survivor补全6技能", migrateTest.hasSkills, "");
-// 注: 老存档若 tasks/achievements 是空数组,mergeDefaults 视为有效不重建(已知边界)
-T("存档迁移: tasks存在(空数组保留,缺失才重建)", Array.isArray(migrateTest?.tasksRebuilt) || (migrateTest?.tasksRebuilt), "边界:空数组不重建");
+// Bug6已修复: 空数组 tasks/achievements 现在也会重建
+T("存档迁移: 空数组tasks/achievements重建", migrateTest.tasksRebuilt && migrateTest.achievementsRebuilt, "tasks7+ach10");
 T("存档迁移: cells还原为Uint8Array", migrateTest.cellsIsUint8, "");
 
 // ═══════════ 盲区10: 损坏存档从备份恢复 ═══════════
@@ -276,8 +276,8 @@ const reveal = await page.evaluate(async () => {
   return { r1New: r1.newlyVisited, visited22, revealed32, revealed12, r2New: r2.newlyVisited };
 });
 T("revealCellAndNeighbors: 踏足格→VISITED", reveal.visited22 === 2, "cell=" + reveal.visited22);
-// ⚠️ 确认BUG: 首次踏足时提前return,相邻格不会被揭示(REVEALED状态几乎不存在)
-T("[确认BUG] reveal相邻格未被揭示(应为1实际0)", reveal.revealed32 === 0, `相邻(3,2)=${reveal.revealed32} (1,2)=${reveal.revealed12} 应为0(bug)`);
+// Bug1已修复: 相邻格现在会被正确揭示成 REVEALED
+T("revealCellAndNeighbors: 相邻格→REVEALED", reveal.revealed32 === 1 && reveal.revealed12 === 1, `相邻(3,2)=${reveal.revealed32} (1,2)=${reveal.revealed12}`);
 T("revealCellAndNeighbors: 重复踏足不重复触发", reveal.r1New && !reveal.r2New, `r1=${reveal.r1New} r2=${reveal.r2New}`);
 
 // ═══════════ 盲区14: checkPoiDiscovery 发现POI并+计数 ═══════════
@@ -395,9 +395,9 @@ const fullDispatch = await page.evaluate(async () => {
   };
 });
 T("派遣完整流程: 最终state=done", fullDispatch.finalState === "done", "state=" + fullDispatch.finalState);
-// ⚠️ 确认BUG: 无事件分支不释放成员、不+expeditionsDone
-T("[确认BUG] 无事件分支成员未释放(应为false)", !fullDispatch.memberReleased, `memberReleased=${fullDispatch.memberReleased}`);
-T("[确认BUG] 无事件分支派遣次数未+1", !fullDispatch.expsInc, `expsInc=${fullDispatch.expsInc}`);
+// Bug2已修复: 无事件分支现在也释放成员、+expeditionsDone
+T("派遣完整流程: 成员被释放", fullDispatch.memberReleased, "busy=" + !fullDispatch.memberReleased);
+T("派遣完整流程: 派遣次数+1", fullDispatch.expsInc, "");
 T("派遣完整流程: 成员获得XP", fullDispatch.xpGained > 0, `+${fullDispatch.xpGained}xp`);
 
 // ═══════════ 盲区19: 袭击触发 + 防御计算 ═══════════

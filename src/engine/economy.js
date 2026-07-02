@@ -74,7 +74,8 @@ export function tickEconomy(state, dt) {
 
   // 居民每日消耗(食物/水): 游戏内 1 天 = 120 秒
   // 注意: delta 是"每秒速率",最后统一 * dt 应用,所以这里用每秒消耗量
-  const pop = state.survivors.filter((s) => !s.busy || s.busy !== "dead").length;
+  // 计入非死亡居民(派遣中的仍驻扎基地,照常消耗)
+  const pop = state.survivors.filter((s) => s.busy !== "dead").length;
   const foodConsumePerSec = (pop * 3) / 120; // 每人每天 3 食物 → 每秒
   const waterConsumePerSec = (pop * 2.5) / 120;
   delta.food -= foodConsumePerSec;
@@ -164,12 +165,4 @@ export function offlineSettle(state, nowMs) {
   state.time += cappedSec;
   // 居民在医疗室恢复一点生命(在线/离线通用)
   return { offlineSec: cappedSec, totalDelta };
-}
-
-// 尝试完成自动判定型任务
-export function checkAutoTasks(state) {
-  for (const t of state.tasks) {
-    if (t.done) continue;
-    const def = state.tasks.find ? null : null;
-  }
 }

@@ -103,7 +103,7 @@ export function levelUpSurvivor(s) {
   if (mainSkill && s.skills) {
     s.skills[mainSkill] = Math.min(10, (s.skills[mainSkill] || 0) + 1);
   }
-  // 升满5级时偶尔+1随机副技能
+  // 每 3 级额外 +1 随机副技能
   if (s.level % 3 === 0 && s.skills) {
     const others = Object.keys(s.skills).filter((k) => k !== mainSkill);
     const pick = others[Math.floor(Math.random() * others.length)];

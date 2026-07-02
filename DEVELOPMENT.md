@@ -4,7 +4,7 @@
 > 从零接手也能在 30 分钟内跑通游戏、1 小时内动手改第一个功能。
 >
 > 文档与代码同步更新规则：**每次改了架构/数据结构/关键逻辑，必须同步更新本文对应章节。**
-> 最后更新：v2.2（事件体系改造 + 分组分布 + 中立/分支事件 + AI 地图图标 + 无线电立绘修复）。
+> 最后更新：v2.2.1（深度测试发现并修复6个bug，新增2套测试共64项）。
 
 ---
 
@@ -555,6 +555,9 @@ node shot_map.mjs      # 地图截图(验证图标渲染,人工看图)
 10. **无线电招募立绘要手动 assignAvatar** — generateSurvivor 生成的 candidate 默认无 avatarImg，必须 `window.__assignAvatar(cand)`（screenTasks.js 约 line 169），否则显示旧占位图。
 11. **cells 是 flat Uint8Array** — 索引 `gy*gridW+gx`，不是 `cells[gy][gx]`。序列化成 `{__u8:[...]}`，读档还原。
 12. **revealCellAndNeighbors 对 REVEALED 格也要返回 newlyVisited** — 早期版本只对 HIDDEN→VISITED 算首次，导致相邻揭示成 REVEALED 后踏足不触发事件。已修：任何非 VISITED 踏足都算首次。
+13. **函数内提前 return 会跳过后续副作用代码** — v2.2.1 修：revealCellAndNeighbors 首次踏足分支曾 `return {newlyVisited:true}` 在揭示相邻格之前，导致相邻格永远 HIDDEN。教训：有副作用的函数不要在分支里提前 return，要先执行完所有副作用再返回标志。
+14. **状态机的每个分支都要完整收尾** — v2.2.1 修：派遣 settleExpedition 的"无事件"分支漏了 `member.busy=null` 和 `expeditionsDone++`，导致成员永久卡住、派遣计数不加。教训：多分支结算(有事件/无事件)要对齐收尾逻辑(释放成员+计数+XP)，最好抽公共函数。详见 screenDispatch.js 的 resolveEvent vs settleExpedition。
+15. **测试要断言副作用而非仅主路径** — 原有测试只验证"踏足格变VISITED""派遣到时间结算"，没验证"相邻格是否揭示""成员是否释放"，漏掉了Bug1/2。教训：写测试多问一句"这个操作还应该改变什么状态"，把副作用也断言上。
 
 ---
 
@@ -601,6 +604,7 @@ node shot_map.mjs      # 地图截图(验证图标渲染,人工看图)
 | v2 | 多地图、存档迁移系统、health、技能、成就、6种资源 | progress.md |
 | v2.1 | 事件池扩到60（好30/坏30）、100%触发 | progress.md |
 | **v2.2** | **事件82个(好40/坏30/中立12)、~33%确定性分布、AI地图图标、无线电立绘修复、分支好坏事件** | **progress.md + 本文档** |
+| **v2.2.1** | **深度测试修复6个bug(网格揭示相邻格/派遣无事件分支结算/info.loot缺失/派遣入口阻塞/居民消耗/空数组存档迁移)+ 新增test_deep+test_ui_e2e共64项** | **progress.md + 本文档** |
 
 ## 附录 B：关键常量速查
 

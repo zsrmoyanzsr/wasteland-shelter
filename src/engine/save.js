@@ -226,9 +226,9 @@ function mergeDefaults(s) {
     if (!s.maps.list[id]) s.maps.list[id] = freshMaps.list[id];
   }
 
-  // tasks / achievements: 缺失则重建
-  if (!Array.isArray(s.tasks)) s.tasks = createInitialTasks();
-  if (!Array.isArray(s.achievements)) s.achievements = createInitialAchievements();
+  // tasks / achievements: 缺失或空数组则重建(空数组也不保留,避免老存档迁移后任务列表为空)
+  if (!Array.isArray(s.tasks) || s.tasks.length === 0) s.tasks = createInitialTasks();
+  if (!Array.isArray(s.achievements) || s.achievements.length === 0) s.achievements = createInitialAchievements();
 
   return s;
 }

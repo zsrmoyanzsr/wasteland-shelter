@@ -369,7 +369,6 @@ function drawFacilityCard(ctx, ui, state, fac, x, y, w, h) {
       }
     )
   ) {
-    state.modal = { type: "buildFacility_close" }; // no-op guard
     state.modal = { type: "upgradeFacility", facId: fac.id };
   }
 }
