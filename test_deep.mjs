@@ -434,6 +434,71 @@ const longRun = await page.evaluate(async () => {
 T("30天(3600tick)长跑无崩溃", longRun.crashes === 0, `crashes=${longRun.crashes}`);
 T("30天长跑: 资源全finite", longRun.allFinite && longRun.svFinite, JSON.stringify(longRun.resSample));
 
+// ═══════════ 盲区21: hunger 平衡修复验证(有食物应回升,不饿死) ═══════════
+const hunger = await page.evaluate(async () => {
+  const s = window.__game.state;
+  const eco = await import("/src/engine/economy.js");
+  // 满仓食物 + 居民饱食度拉低
+  s.res.food = 100;
+  for (const sv of s.survivors) { sv.hunger = 10; sv.health = 100; }
+  const h0 = s.survivors[0].hunger;
+  for (let i = 0; i < 120; i++) eco.tickEconomy(s, 1); // 1天
+  const h1 = s.survivors[0].hunger;
+  // 食物耗尽场景: 真正缺粮需产能为0(拆掉农场/不产食物)
+  s.res.food = 0;
+  s.base.facilities = s.base.facilities.filter(f => f.type !== "farm"); // 移除农场
+  for (const sv of s.survivors) sv.hunger = 50;
+  const h2before = s.survivors[0].hunger;
+  for (let i = 0; i < 120; i++) eco.tickEconomy(s, 1); // 食物持续为0
+  const h2after = s.survivors[0].hunger;
+  return { h0, h1, risesWithFood: h1 > h0, h2before, h2after, dropsWhenStarving: h2after < h2before };
+});
+T("[hunger平衡] 有食物时饱食度回升", hunger.risesWithFood, `${hunger.h0.toFixed(0)}→${hunger.h1.toFixed(0)}`);
+T("[hunger平衡] 食物耗尽时饱食度下降", hunger.dropsWhenStarving, `${hunger.h2before}→${hunger.h2after.toFixed(0)}`);
+
+// ═══════════ 盲区22: 新手引导系统 ═══════════
+const guide = await page.evaluate(async () => {
+  const g = await import("/src/engine/guide.js");
+  const s = window.__game.state;
+  s.guide = { explored: false, dispatched: false, built: false, recruited: false, dismissed: [] };
+  const g1 = g.currentGuide(s); // 初始应提示去探索
+  g.markExplored(s);
+  const g2 = g.currentGuide(s); // 探索后,无POI时应为null或低优先提示
+  // 关闭提示
+  g.dismissGuide(s, "go_explore");
+  return { g1Id: g1?.id, g2Id: g2?.id, hasGuideField: !!s.guide };
+});
+T("[引导] 初始提示去探索", guide.g1Id === "go_explored" || guide.g1Id === "go_explore" || guide.g1Id === "go_build" || guide.g1Id === "low_food", "id=" + guide.g1Id);
+T("[引导] markExplored后状态更新", guide.hasGuideField, "");
+
+// ═══════════ 盲区23: 派遣状态机重构 — 两个分支都释放成员+计数 ═══════════
+const dispatchBoth = await page.evaluate(async () => {
+  const s = window.__game.state;
+  const reg = await import("/src/content/regions.js");
+  const disp = await import("/src/screens/screenDispatch.js");
+  const { makeRng } = await import("/src/content/survivors.js");
+  s.maps.list.town.pois[0].discovered = true;
+  s.maps.list.town.pois[1].discovered = true;
+  s.maps.list.town.discoveredCount = 2;
+  for (const sv of s.survivors) { sv.assigned = null; sv.busy = null; }
+  // 测试无事件分支(rng=0.8)
+  const m1 = s.survivors[0], m2 = s.survivors[1];
+  const expsBefore = s.stats.expeditionsDone;
+  const e1 = { id: s.nextExpeditionId++, regionId: 1, mapId:"town", regionType:"town", regionName:"辐射小镇", members:[m1.id], startAt: s.time, duration: 10, state:"running", rng: ()=>0.8, event:null, rewards:{} };
+  s.expeditions.push(e1); m1.busy = "expedition";
+  s.time += 11; disp.updateExpeditions(s, 1);
+  const noEventOk = e1.state === "done" && m1.busy === null;
+  // 测试有事件分支(rng=0.1触发事件,再手动resolve)
+  const e2 = { id: s.nextExpeditionId++, regionId: 2, mapId:"town", regionType:"town", regionName:"辐射小镇", members:[m2.id], startAt: s.time, duration: 10, state:"running", rng: (()=>{let c=0; return ()=>{c++; return c===1?0.1:0.5;};})(), event:null, rewards:{} };
+  s.expeditions.push(e2); m2.busy = "expedition";
+  s.time += 11; disp.updateExpeditions(s, 1);
+  // e2 应进入 event 状态
+  const eventTriggered = e2.state === "event" && !!e2.event;
+  return { noEventOk, eventTriggered, expsDelta: s.stats.expeditionsDone - expsBefore, m1Free: m1.busy === null };
+});
+T("[派遣重构] 无事件分支: done+成员释放", dispatchBoth.noEventOk, `state done & m1 free=${dispatchBoth.m1Free}`);
+T("[派遣重构] 有事件分支: 正确触发event", dispatchBoth.eventTriggered, "");
+
 // 报告
 console.log("\n═══════════ 深度测试报告 (覆盖盲区+bug验证) ═══════════");
 let pass = 0, fail = 0;

@@ -123,16 +123,20 @@ function healInMedbay(state, dt) {
 }
 
 // 更新幸存者需求状态
+// 关键平衡: hunger 应与食物供给联动 —— 有食物时回升(已通过经济层扣除消耗),
+// 食物短缺时加速下降并扣血。修复点: 旧版 hunger 即使食物满仓也线性归零。
 function updateSurvivorNeeds(state, dt, { foodConsume, waterConsume }) {
   const foodShort = state.res.food <= 0.5;
-  const waterShort = state.res.water <= 0.5;
   const dayFrac = dt / 120;
   for (const s of state.survivors) {
     if (s.busy === "dead") continue;
-    // 饥饿/口渴随时间下降
-    s.hunger -= 6 * dayFrac * (foodShort ? 1.5 : 1);
-    if (foodShort) s.hunger -= 8 * dayFrac;
-    s.hunger = Math.max(0, s.hunger);
+    // 饱食度: 有食物供给时回升(吃饭),食物短缺时加速下降
+    if (foodShort) {
+      s.hunger -= 14 * dayFrac; // 缺粮: 加速饥饿(原6+8)
+    } else {
+      s.hunger += 8 * dayFrac;  // 有粮: 饱食度回升(每天+8,慢于消耗确保仍需持续产粮)
+    }
+    s.hunger = Math.max(0, Math.min(100, s.hunger));
     // 心情受饥饿/健康影响
     let moodDelta = 0;
     if (s.hunger < 30) moodDelta -= 5 * dayFrac;

@@ -17,6 +17,8 @@ import {
 import { contentRect } from "./screenHud.js";
 import { FACILITY_TYPES, buildableTypes, facilityStats, upgradeCost } from "../content/facilities.js";
 import { addFloat, addLog } from "../engine/state.js";
+import { markBuilt } from "../engine/guide.js";
+import { drawGuideBanner } from "../ui/guideBanner.js";
 import * as _StateMod from "../engine/state.js";
 import { populationCap } from "../content/survivors.js";
 import * as _RegionsMod from "../content/regions.js";
@@ -44,8 +46,11 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
     ui.pointer.pressed = false;
   }
 
+  // 引导横幅(有提示才占位,无则返回0)
+  const guideH = drawGuideBanner(ctx, ui, state, 14, cr.y + 58, cr.w - 28);
+
   // 外出探索入口(紧凑横幅)
-  const exploreY = cr.y + 58;
+  const exploreY = cr.y + 58 + guideH;
   drawExploreEntry(ctx, ui, state, 16, exploreY, cr.w - 32, 52);
 
   // 已建设施网格
@@ -560,6 +565,7 @@ export function drawBuildModal(ctx, ui, state, W, H) {
     addFloat(state, W / 2, my, `${def.icon} 已建造`, T.primary);
     addLog(state, `建造了 ${def.name}`, T.primary);
     state.stats.facilitiesBuilt += 1;
+    markBuilt(state); // 引导埋点
     state.modal = null;
   }
   if (button(ctx, ui, mx + mw - 154, by, 130, 40, "取消", {

@@ -217,6 +217,13 @@ function mergeDefaults(s) {
   if (s.raid.timer == null) s.raid.timer = DEFAULTS.raid.timer;
   if (s.raid.threat == null) s.raid.threat = DEFAULTS.raid.threat;
 
+  // guide(新手引导)
+  if (!s.guide) s.guide = { ...DEFAULTS.guide };
+  if (!Array.isArray(s.guide.dismissed)) s.guide.dismissed = [];
+  for (const k of ["explored", "dispatched", "built", "recruited"]) {
+    if (s.guide[k] == null) s.guide[k] = false;
+  }
+
   // maps: 重建若缺失,补全缺失地图
   if (!s.maps) s.maps = createMaps();
   if (!s.maps.list) s.maps.list = {};

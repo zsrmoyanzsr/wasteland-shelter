@@ -19,6 +19,8 @@ import { PERKS } from "../content/survivors.js";
 import { rollEvent } from "../content/events.js";
 import { makeRng, generateSurvivor } from "../content/survivors.js";
 import { addLog, addFloat, SCREEN } from "../engine/state.js";
+import { markDispatched } from "../engine/guide.js";
+import { drawGuideBanner } from "../ui/guideBanner.js";
 
 // 派遣持续时间(秒) = 基础 + 难度
 function expDuration(danger) {
@@ -46,8 +48,11 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
     color: T.textDim,
   });
 
+  // 引导横幅
+  const guideH = drawGuideBanner(ctx, ui, state, 14, cr.y + 56, cr.w - 28);
+
   // 进行中的探索
-  let yy = cr.y + 62;
+  let yy = cr.y + 62 + guideH;
   const running = state.expeditions.filter((e) => e.state !== "done");
   if (running.length) {
     text(ctx, "进行中", 16, yy, { size: T.fontSm, color: T.info, weight: "700" });
@@ -336,6 +341,7 @@ export function drawTeamModal(ctx, ui, state, W, H) {
 // 启动探索
 function launchExpedition(state, poi, members) {
   const info = poiInfo(poi.type);
+  markDispatched(state); // 引导埋点
   const id = state.nextExpeditionId++;
   const duration = expDuration(info.danger);
   const exp = {
@@ -377,6 +383,28 @@ export function updateExpeditions(state, dt) {
   }
 }
 
+// 公共: 派遣结算收尾 —— 释放成员、加经验、计派遣次数、设状态
+// 抽出此函数统一两个分支(有事件 resolveEvent / 无事件 settleExpedition)的收尾,
+// 避免再次出现某分支漏写 busy=null 或 expeditionsDone++ 的 bug(原 Bug2)
+function finishExpedition(state, e, memberXp) {
+  const members = e.members.map((id) => state.survivors.find((s) => s.id === id)).filter(Boolean);
+  for (const m of members) {
+    m.busy = null;
+    if (memberXp) {
+      m.xp += memberXp;
+      while (m.xp >= m.xpNeed) {
+        m.xp -= m.xpNeed;
+        if (window.__levelUp) window.__levelUp(m);
+        else { m.level += 1; m.xpNeed = xpForLevelLocal(m.level); }
+      }
+    }
+  }
+  if (e.state !== "done") {
+    e.state = "done";
+    state.stats.expeditionsDone++;
+  }
+}
+
 function settleExpedition(state, e) {
   const info = poiInfo(e.regionType);
   const members = e.members.map((id) => state.survivors.find((s) => s.id === id)).filter(Boolean);
@@ -396,21 +424,9 @@ function settleExpedition(state, e) {
     e.event = rollEvent(rng);
     e.state = "event"; // 等待玩家抉择
   } else {
-    // 直接完成(无事件)
-    e.state = "done";
-    // 立即发奖
+    // 直接完成(无事件): 发奖后统一收尾
     applyRewards(state, baseRewards);
-    // 成员释放 + XP (与 resolveEvent 分支保持一致,避免成员永久卡 busy)
-    for (const m of members) {
-      m.busy = null;
-      m.xp += 20;
-      while (m.xp >= m.xpNeed) {
-        m.xp -= m.xpNeed;
-        if (window.__levelUp) window.__levelUp(m);
-        else { m.level += 1; m.xpNeed = xpForLevelLocal(m.level); }
-      }
-    }
-    state.stats.expeditionsDone++;
+    finishExpedition(state, e, 20); // 释放成员 + 20XP + 计数
   }
 }
 
@@ -524,27 +540,14 @@ function resolveEvent(state, e, choice, ctxObj) {
   }
   if (result.log) addLog(state, result.log.text, result.log.color);
 
-  // 结算完成: 发奖,释放成员
+  // 结算完成: 发奖(含负值扣减),然后统一收尾
   applyRewards(state, e.rewards);
-  // 移除负值奖励已应用过(applyRewards 只加正数? 处理负数)
   for (const k in e.rewards) {
     if (e.rewards[k] < 0) {
       state.res[k] = Math.max(0, (state.res[k] || 0) + e.rewards[k]);
     }
   }
-  // 成员释放 + XP
-  const members = e.members.map((id) => state.survivors.find((s) => s.id === id)).filter(Boolean);
-  for (const m of members) {
-    m.busy = null;
-    m.xp += 25;
-    while (m.xp >= m.xpNeed) {
-      m.xp -= m.xpNeed;
-      if (window.__levelUp) window.__levelUp(m);
-      else { m.level += 1; m.xpNeed = xpForLevelLocal(m.level); }
-    }
-  }
-  e.state = "done";
-  state.stats.expeditionsDone++;
+  finishExpedition(state, e, 25); // 释放成员 + 25XP + 计数 + 设 done
   state.modal = { type: "expeditionResult", expId: e.id, justResolved: true };
 }
 

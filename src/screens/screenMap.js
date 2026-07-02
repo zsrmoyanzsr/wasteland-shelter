@@ -27,6 +27,7 @@ function tileIconIndex(gx, gy, mapId) {
 }
 import { contentRect } from "./screenHud.js";
 import { getHeroImage } from "../engine/avatarLoader.js";
+import { markExplored } from "../engine/guide.js";
 import {
   currentMap,
   mapPixelSize,
@@ -47,6 +48,7 @@ export function drawMapScreen(ctx, state, ui, W, H) {
   const vh = cr.h;
   const map = currentMap(state);
   if (!map) return;
+  markExplored(state); // 进入地图屏即标记已探索(引导用)
   const size = mapPixelSize(map);
 
   // 切换地图时,摄像机对准主角

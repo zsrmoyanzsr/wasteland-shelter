@@ -19,6 +19,7 @@ import { addLog, addFloat } from "../engine/state.js";
 import { drawAvatar } from "../ui/avatar.js";
 import { totalDiscovered } from "../content/regions.js";
 import { ACHIEVEMENT_DEFS, achievementDef, rebuildProgress } from "../content/achievements.js";
+import { markRecruited } from "../engine/guide.js";
 
 const _rebuildProgress = rebuildProgress;
 const _achDef = achievementDef;
@@ -271,6 +272,7 @@ export function drawRecruitModal(ctx, ui, state, W, H) {
     state.survivors.push(c);
     state.nextSurvivorId = Math.max(state.nextSurvivorId, c.id + 1);
     state.stats.survivorsRecruited++;
+    markRecruited(state); // 引导埋点
     // 分配头像(若有外部图)
     if (window.__assignAvatar) window.__assignAvatar(c);
     addLog(state, `${c.name} (${c.profName}) 加入了避难所!`, T.primary);

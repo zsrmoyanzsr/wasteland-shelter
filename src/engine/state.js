@@ -127,6 +127,15 @@ export function createNewState() {
       timer: 600, // 距下次袭击(秒)
       threat: 0, // 威胁值 0..1
     },
+
+    // 新手引导: 记录玩家已完成的里程碑,据此显示提示
+    guide: {
+      explored: false,     // 是否进过地图探索
+      dispatched: false,   // 是否发起过派遣
+      built: false,        // 是否建造过设施(非初始)
+      recruited: false,    // 是否招募过幸存者
+      dismissed: [],       // 已关闭的提示 id(不再弹)
+    },
   };
   // 主角初始位置 = home 地图入口格中心
   const homeMap = currentMap(st);
@@ -204,6 +213,8 @@ export const DEFAULTS = {
   radio: { candidate: null, cooldown: 0 },
   // 袭击
   raid: { timer: 600, threat: 0 },
+  // 新手引导(mergeDefaults 补全)
+  guide: { explored: false, dispatched: false, built: false, recruited: false, dismissed: [] },
   // 单个幸存者的可缺失字段默认值
   survivor: {
     perks: [],

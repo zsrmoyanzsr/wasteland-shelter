@@ -410,3 +410,51 @@ prompt 模板: `"anime style, {角色描述}, post apocalyptic survivor, head po
 - 关键改进: 测试从"只断言主路径成功"升级为"断言副作用完整"(如验证相邻格状态、成员释放),
   这是发现Bug1/2的关键
 - git仓库已初始化,基线提交 52fa30e
+
+## v2.3 新手引导 + 数值平衡修复 + 派遣重构 (本轮)
+
+> 三件事: 加新手引导系统、数值长测发现并修复hunger平衡bug、派遣状态机重构。
+> **5套测试全过(logic26+edge14+deep43+ui27+balance),全程无console error。**
+
+### 1. 新手引导系统 (engine/guide.js + ui/guideBanner.js)
+- **问题**: 开局无教程,玩家不知道先建什么、怎么探索、派遣要解除分配,新手流失
+- **方案**: 轻量横幅式引导(非强制弹窗),基于游戏进度判断该提示什么,完成对应行动即消失,可手动✕关闭
+- **触发点**:
+  - 还没探索过 → 引导去地图(go_explore)
+  - 发现POI但没派遣过 → 引导派遣(go_dispatch)
+  - 食物<20 → 警告建农场(low_food)
+  - 资源够但没建过设施 → 鼓励建设(go_build)
+- **埋点**: state.guide 记录里程碑(explored/dispatched/built/recruited),各系统在操作成功时更新
+  - markExplored: 进入地图屏(screenMap.js)
+  - markDispatched: launchExpedition(screenDispatch.js)
+  - markBuilt: 建造确认(screenBase.js)
+  - markRecruited: 招募确认(screenTasks.js)
+- **渲染**: drawGuideBanner 在 base/dispatch 屏内容区顶部,有提示才占位(无则返回0不影响布局)
+- **存档兼容**: state.guide 加入 DEFAULTS 模板 + mergeDefaults 补全,老存档自动获得引导字段
+
+### 2. 【平衡bug修复】hunger 饱食度与食物供给脱钩 (economy.js updateSurvivorNeeds)
+- **问题(长测发现)**: 旧逻辑 `hunger -= 6*dayFrac` 是**无条件下降**,即使食物满仓居民也线性饿死
+- **长测证据**: 500天测试显示食物=100满仓,但4/4居民 hunger=0 全员饥饿受伤
+- **根因**: 经济层(扣食物消耗)和需求层(hunger)是两套独立系统,没打通
+- **修复**: 有食物供给时 hunger 回升(每天+8),食物短缺时加速下降(每天-14)
+- **验证**: test_deep "hunger平衡" 两项 ✅,长测从"全员饿死"变"饿0伤0"稳定500天
+
+### 3. 【已知平衡问题·记录】后期经济瓶颈(未修,需玩法决策)
+- **现象**: 长测发现食物/水/电会爆仓(满仓无消耗出口),但**废铁/零件严重短缺**
+- **根因**: 废铁产出极少(仅探索/派遣获得),工坊产零件却要消耗废铁(死循环);
+  升级基地/建造都要大量废铁零件,后期卡死所有发展
+- **建议(待后续决策)**: ① 加"废料场"设施稳定产废铁 ② 调整工坊不消耗废铁或减少消耗
+  ③ 派遣奖励增加废铁产出 ④ 后期加废铁消耗出口(如维修)
+- **状态**: 记录在案,未在本轮修改(涉及玩法数值设计,需玩家验证)
+
+### 4. 派遣状态机重构 (screenDispatch.js)
+- **问题(防Bug2同类)**: 出发/结算/释放逻辑散在 launchExpedition/settleExpedition/resolveEvent 4处,
+  有事件/无事件两个分支各自手写收尾,导致原Bug2(无事件分支漏写释放)
+- **重构**: 抽公共函数 `finishExpedition(state,e,xp)`,统一"释放成员+加XP+计expeditionsDone+设done"
+- **效果**: 两个分支现在都调用它,逻辑单一来源,杜绝同类bug。验证:test_deep "派遣重构"两项 ✅
+
+### 测试
+- test_deep.mjs 增至 **43项**(新增hunger平衡/引导系统/派遣重构6项专项测试)
+- **新增 test_balance.mjs**: 数值长测,模拟AI玩家发展策略跑100/300/500天,自动发现平衡问题
+  (正是它发现了hunger bug)。5套测试体系完整建立
+- **5套全过**: logic(26) + edge(14) + deep(43) + ui_e2e(27) + balance(长测)
