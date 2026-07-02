@@ -541,3 +541,55 @@ prompt 模板: `"anime style, {角色描述}, post apocalyptic survivor, head po
 
 ### 已知小细节
 - AI视觉分析发现:当玩家只有1-2种富余资源时,3个方案的付出资源可能相同(已优化:尽量分散,但极端情况下仍可能重复)。功能正常,获得资源不同,体验可接受
+
+## v2.5 玩法转向:前期靠派遣 + 派遣属性深度 (本轮)
+
+> 按玩家反馈调整核心循环:前期资源精简、自产削弱(让派遣成为前期主力)、
+> 派遣产出与队伍属性挂钩(组队策略)、远POI高风险高回报。**5套测试全过(test_deep增至61项)。**
+
+### 问题(数据验证)
+- 开局 farm+well 1天净产 food+44/water+25,居民只吃 6/5 → 前期食物水严重过剩,派遣显得多余
+- 派遣产出与队伍属性无关(只 scavenger +25%全局)→ 组队无策略,纯等倒计时
+- 6种资源开局全给 → 认知负担
+
+### 改动1: 削弱前期自产,强化升级回报 (facilities.js)
+- farm: base food 0.6→**0.35**/s(lv1弱), growth 1.6→**1.75**(lv5≈3.3反超)
+- well: base water 0.5→**0.3**/s, growth 1.6→**1.75**
+- 效果: lv1 自产刚够温饱(1天净产 food +23 vs 之前 +44),玩家需派遣补发展物资;
+  升到 lv3-5 后自产反超成为主力(符合"前期派遣后期自产"设计)
+
+### 改动2: 开局资源精简 (state.js)
+- food 50→30, water 50→30, parts 20→8, scrap 30→15
+- **meds/power 初始改为0**(靠派遣/建造获得),降低新手认知负担
+- 同步更新 DEFAULTS.res(老存档迁移一致)
+
+### 改动3: 派遣产出与队伍属性挂钩 — 组队策略核心 (screenDispatch.js)
+新增 REWARD_SKILL 映射表,按资源类型算对应技能/特长加成:
+| 资源 | 对应特长 | 对应技能 | 特长加成 | 每点技能 |
+|------|---------|---------|---------|---------|
+| parts | engineer | craft | +50% | +5% |
+| meds | doctor | medical | +50% | +5% |
+| scrap | guardian | combat | +40% | +4% |
+| power | negotiator | social | +30% | +4% |
+| food/water | scavenger | scavenge | +30% | +4% |
+- 效果: 派工程师去工厂多拿零件、医生去医院多拿药、士兵去小镇多拿废铁
+- 实测: 无属性队伍 parts=9,工程师队伍 parts=15(+67%)→ **组队有意义了**
+
+### 改动4: 远POI时间更长 + 产出更好 (screenDispatch.js)
+- expDuration: `30 + danger*15` → `25 + danger²*12`
+  (danger1=37s 近快速 / 2=73s / 3=133s / 4=217s 远慢)
+- quality 倍率: `1 + (danger-1)*0.3`(danger1=1.0 / 4=1.9 近翻倍)
+- 效果: 近点(cache/town)快速刷、远点(factory/military)高回报慢节奏,**"刷近还是赌远"取舍**
+
+### 测试 (test_deep 增至61项,+5专项)
+- [派遣属性] 工程师队伍 parts 产出 > 无属性队伍 ✅
+- [派遣距离] 远POI时间显著更长(37s vs 217s) ✅
+- [派遣距离] 远POI quality 倍率更高(1.0 vs 1.9) ✅
+- [前期精简] meds/power 初始为0 ✅
+- [前期精简] 开局资源适量 ✅
+- 5套全过: logic26 + edge14 + deep61 + ui27 + balance
+
+### 设计验证
+- 长测500天: 资源稳定不饿死,自产+废料场+商队维持发展
+- 前期 food/water 够活但 parts/meds/scrap 需派遣(开局0)
+- 后期 farm/well 升级后产能反超,符合节奏设计

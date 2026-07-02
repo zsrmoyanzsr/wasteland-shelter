@@ -22,9 +22,10 @@ import { addLog, addFloat, SCREEN } from "../engine/state.js";
 import { markDispatched } from "../engine/guide.js";
 import { drawGuideBanner } from "../ui/guideBanner.js";
 
-// 派遣持续时间(秒) = 基础 + 难度
+// 派遣持续时间(秒): 远的(danger高)明显更久,形成"刷近快速 vs 赌远高回报"取舍
+// danger1=37s(近) 2=73s 3=133s 4=217s(远)
 function expDuration(danger) {
-  return 30 + danger * 15;
+  return 25 + danger * danger * 12;
 }
 
 export function drawDispatchScreen(ctx, state, ui, W, H) {
@@ -405,17 +406,47 @@ function finishExpedition(state, e, memberXp) {
   }
 }
 
+// 资源 → 影响它的技能/特长映射(组队策略: 派对应职业去对应POI收益更高)
+// 每种资源由特定技能/特长加成: perk 有则大加,技能点数额外小加
+const REWARD_SKILL = {
+  parts:   { perk: "engineer",  skill: "craft",    perkBonus: 0.5, perSkill: 0.05 },
+  meds:    { perk: "doctor",    skill: "medical",  perkBonus: 0.5, perSkill: 0.05 },
+  scrap:   { perk: "guardian",  skill: "combat",   perkBonus: 0.4, perSkill: 0.04 },
+  power:   { perk: "negotiator",skill: "social",   perkBonus: 0.3, perSkill: 0.04 },
+  food:    { perk: "scavenger", skill: "scavenge", perkBonus: 0.3, perSkill: 0.04 },
+  water:   { perk: "scavenger", skill: "scavenge", perkBonus: 0.3, perSkill: 0.04 },
+};
+
 function settleExpedition(state, e) {
   const info = poiInfo(e.regionType);
   const members = e.members.map((id) => state.survivors.find((s) => s.id === id)).filter(Boolean);
-  // 基础战利品(随机)
   const rng = e.rng;
+
+  // ① 全局侦察兵加成(全资源 +25%)
   const scavMult = members.some((m) => m.perks && m.perks.includes("scavenger")) ? 1.25 : 1;
+  // ② 远 POI 产出倍率: danger 越高产出越好(1.0/1.3/1.6/1.9)
+  const qualityMult = 1 + (info.danger - 1) * 0.3;
+
+  // ③ 按资源类型算属性加成(组队策略核心)
   const baseRewards = {};
   for (const k in info.rewards) {
     const [lo, hi] = info.rewards[k];
-    const amt = Math.round((lo + rng() * (hi - lo)) * scavMult);
-    if (amt > 0) baseRewards[k] = amt;
+    let amt = lo + rng() * (hi - lo);
+    amt *= scavMult * qualityMult;
+    // 该资源对应的技能/特长加成
+    const rs = REWARD_SKILL[k];
+    if (rs) {
+      let bonus = 0;
+      for (const m of members) {
+        const hasPerk = m.perks && m.perks.includes(rs.perk);
+        const skillVal = (m.skills && m.skills[rs.skill]) || 0;
+        if (hasPerk) bonus += rs.perkBonus;
+        bonus += skillVal * rs.perSkill;
+      }
+      amt *= 1 + bonus;
+    }
+    const rounded = Math.round(amt);
+    if (rounded > 0) baseRewards[k] = rounded;
   }
   e.rewards = baseRewards;
 

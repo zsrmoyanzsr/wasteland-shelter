@@ -40,14 +40,14 @@ export function createNewState() {
     timeOfDay: 0.3, // 0..1 一天内进度,影响昼夜色调
     speed: 1, // 时间流速倍率(测试用)
 
-    // 资源
+    // 资源(前期精简: 只给基础生存物资,parts/scrap 少量,meds/power 靠派遣/建造获得)
     res: {
-      food: 50,
-      water: 50,
-      parts: 20,
-      power: 10,
-      meds: 8,
-      scrap: 30,
+      food: 30,
+      water: 30,
+      parts: 8,
+      power: 0,
+      meds: 0,
+      scrap: 15,
     },
     resCap: {
       food: 100,
@@ -204,8 +204,8 @@ export const MAX_BASE_LEVEL = 5;
 // ── 默认值模板(供存档迁移补全缺失字段) ──
 // 嵌套对象的默认值,mergeDefaults 用这些给老存档的缺失字段补值,避免 NPE/NaN
 export const DEFAULTS = {
-  // 资源
-  res: { food: 50, water: 50, parts: 20, power: 10, meds: 8, scrap: 30 },
+  // 资源(与 createNewState 保持一致;前期精简)
+  res: { food: 30, water: 30, parts: 8, power: 0, meds: 0, scrap: 15 },
   resCap: { food: 100, water: 100, parts: 100, power: 50, meds: 50, scrap: 100 },
   // 统计(注意:每个子字段都要补,否则解锁条件/成就 NaN)
   stats: {

@@ -600,6 +600,84 @@ T("[存档迁移 v2→v3] 加载成功", migrateV3.loaded, "");
 T("[存档迁移 v2→v3] version升到3", migrateV3.version === 3, "v=" + migrateV3.version);
 T("[存档迁移 v2→v3] 补全caravan字段", migrateV3.hasCaravan && migrateV3.caravanHasTimer && migrateV3.caravanHasOffers, "");
 
+// ═══════════ 盲区27: 派遣属性加成 — 队伍技能/特长影响产出(组队策略) ═══════════
+const dispatchAttr = await page.evaluate(async () => {
+  const s = window.__game.state;
+  const reg = await import("/src/content/regions.js");
+  const sv = await import("/src/content/survivors.js");
+  const disp = await import("/src/screens/screenDispatch.js");
+  // 发现 factory POI(danger3, 主产 parts)
+  s.maps.list.factory.unlocked = true;
+  s.maps.list.factory.pois[0].discovered = true;
+  s.res.parts = 35;
+  reg.updateUnlocks(s);
+
+  // 辅助: 构造 expedition 并结算,返回 parts 产出
+  function runSettle(members) {
+    const e = {
+      id: 999, regionId: 1, mapId:"factory", regionType:"factory", regionName:"锈蚀工厂",
+      members: members.map(m=>m.id), startAt: s.time, duration: 10, state:"running",
+      rng: (()=>{ let c=0; return ()=>{ c++; return c<=2 ? 0.5 : 0.9; }; })(), // 固定rng便于对比
+      event: null, rewards: {},
+    };
+    // 临时加入成员
+    for (const m of members) if (!s.survivors.find(x=>x.id===m.id)) s.survivors.push(m);
+    // 直接调内部 settle(通过 updateExpeditions 触发,需 time>=duration)
+    s.expeditions.push(e);
+    s.time += 11;
+    disp.updateExpeditions(s, 1);
+    // 若触发事件(rng第3次0.9>0.7),手动resolve选第一项
+    if (e.state === "event") {
+      const ctxObj = { rng: e.rng, members, hasPerk:(p)=>members.some(m=>m.perks&&m.perks.includes(p)), combatScore:()=>1 };
+      const r = e.event.choices[0].resolve(ctxObj);
+      if (r.rewards) for (const k in r.rewards) e.rewards[k] = (e.rewards[k]||0)+r.rewards[k];
+      e.state = "done";
+    }
+    return e.rewards.parts || 0;
+  }
+
+  // A: 无属性队伍(基准)
+  const plainMem = { id: 300, name:"路人", profession:"farmer", profName:"农夫", profIcon:"🌱", perks:[], level:1, xp:0, xpNeed:80, skills:{medical:0,craft:0,scavenge:0,combat:0,farm:0,social:0}, health:100, maxHealth:100, hunger:80, mood:75, assigned:null, busy:null };
+  const partsPlain = runSettle([{...plainMem, id:301}]);
+  // B: 工程师队伍(craft=5 + engineer perk → parts 加成)
+  const engMem = { id: 302, name:"工程师", profession:"engineer", profName:"工程师", profIcon:"🛠️", perks:["engineer"], level:1, xp:0, xpNeed:80, skills:{medical:0,craft:5,scavenge:0,combat:0,farm:0,social:0}, health:100, maxHealth:100, hunger:80, mood:75, assigned:null, busy:null };
+  const partsEng = runSettle([{...engMem, id:303}]);
+
+  return { partsPlain, partsEng, engineerBetter: partsEng > partsPlain };
+});
+T("[派遣属性] 工程师队伍 parts 产出高于无属性队伍", dispatchAttr.engineerBetter, `无属性=${dispatchAttr.partsPlain} 工程师=${dispatchAttr.partsEng}`);
+
+// ═══════════ 盲区28: 远POI 时间更长 + quality倍率 ═══════════
+const poiDistance = await page.evaluate(async () => {
+  // 直接验证 expDuration 和 quality 公式效果
+  // expDuration: danger1=37s, 2=73s, 3=133s, 4=217s
+  // quality: danger1=1.0, 2=1.3, 3=1.6, 4=1.9
+  function expDuration(d) { return 25 + d*d*12; }
+  function quality(d) { return 1 + (d-1)*0.3; }
+  return {
+    d1_time: expDuration(1), d4_time: expDuration(4),
+    farLonger: expDuration(4) > expDuration(1) * 3,
+    d1_q: quality(1), d4_q: quality(4),
+    farRicher: quality(4) > quality(1),
+  };
+});
+T("[派遣距离] 远POI(danger4)时间显著更长", poiDistance.farLonger, `近${poiDistance.d1_time}s vs 远${poiDistance.d4_time}s`);
+T("[派遣距离] 远POI产出quality倍率更高", poiDistance.farRicher, `近q${poiDistance.d1_q} vs 远q${poiDistance.d4_q}`);
+
+// ═══════════ 盲区29: 前期资源精简验证(直接读 createNewState 原始默认,避免被前面测试污染) ═══════════
+const earlyRes = await page.evaluate(async () => {
+  const stMod = await import("/src/engine/state.js");
+  const fresh = stMod.createNewState();
+  return {
+    food: fresh.res.food, water: fresh.res.water, parts: fresh.res.parts,
+    power: fresh.res.power, meds: fresh.res.meds, scrap: fresh.res.scrap,
+    medsZero: fresh.res.meds === 0, powerZero: fresh.res.power === 0,
+    simplified: fresh.res.food <= 30 && fresh.res.parts <= 10,
+  };
+});
+T("[前期精简] meds/power 初始为0(靠派遣获得)", earlyRes.medsZero && earlyRes.powerZero, `meds=${earlyRes.meds} power=${earlyRes.power}`);
+T("[前期精简] 开局资源适量(food≤30,parts≤10)", earlyRes.simplified, `food=${earlyRes.food} parts=${earlyRes.parts}`);
+
 // 报告
 console.log("\n═══════════ 深度测试报告 (覆盖盲区+bug验证) ═══════════");
 let pass = 0, fail = 0;

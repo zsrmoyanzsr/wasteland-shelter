@@ -7,17 +7,16 @@ export const FACILITY_TYPES = {
     type: "farm",
     name: "辐射农场",
     icon: "🌾",
-    desc: "种植变异作物,稳定产出食物。分配'种植'特长居民产量+50%。",
+    desc: "种植变异作物,稳定产出食物。前期产能有限需派遣补充,升级后成为食物主力。",
     category: "survival",
     catLabel: "生存",
     maxLevel: 5,
     base: {
-      produces: { food: 0.6 }, // 每秒(基础)
+      produces: { food: 0.35 }, // lv1 弱(前期靠派遣),升级后 growth 高反超
       consumes: { water: 0.1 },
-      jobs: 2, // 可容纳居民数
+      jobs: 2,
     },
-    // 每级倍率
-    growth: 1.6,
+    growth: 1.75, // 拉高:lv1=0.35, lv3≈1.07, lv5≈3.3
     cost: (lvl) => ({ scrap: 10 + lvl * 8, parts: 4 + lvl * 3 }),
     perk: "farmer",
   },
@@ -25,12 +24,12 @@ export const FACILITY_TYPES = {
     type: "well",
     name: "净水装置",
     icon: "🚰",
-    desc: "过滤辐射水,产出净水。无需电力,基础生存设施。",
+    desc: "过滤辐射水,产出净水。前期产能有限,升级后产量大幅提升。",
     category: "survival",
     catLabel: "生存",
     maxLevel: 5,
-    base: { produces: { water: 0.5 }, consumes: {}, jobs: 1 },
-    growth: 1.6,
+    base: { produces: { water: 0.3 }, consumes: {}, jobs: 1 },
+    growth: 1.75,
     cost: (lvl) => ({ scrap: 8 + lvl * 6, parts: 3 + lvl * 2 }),
     perk: "engineer",
   },
