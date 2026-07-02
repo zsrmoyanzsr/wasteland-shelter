@@ -82,8 +82,9 @@ function drawSurvivorCard(ctx, ui, state, s, x, y, w, h) {
   // 头像(程序化绘制女性角色 / 或外部立绘图)
   drawAvatar(ctx, x + 34, y + 38, 24, s);
 
-  // 名字 + 职业
-  text(ctx, s.name, x + 68, y + 12, { size: T.fontMd, color: T.text, weight: "700" });
+  // 名字 + 职业(名字截断防溢出,清理换行符防渲染异常)
+  const safeName = String(s.name || "").replace(/[\r\n]+/g, " ");
+  textTrunc(ctx, safeName, x + 68, y + 12, w - 148, { size: T.fontMd, color: T.text, weight: "700" });
   text(ctx, `${s.profName} · Lv.${s.level}`, x + 68, y + 32, {
     size: T.fontSm,
     color: T.textDim,

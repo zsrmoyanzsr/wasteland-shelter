@@ -53,6 +53,12 @@ export function createInput(canvas) {
     if (pointer.down) {
       pointer.dragX = p.x;
       pointer.dragY = p.y;
+      // 滚动误触防护: 按下后移动超过阈值(8px)则视为拖拽/滚动,取消点击意图
+      // 避免: 列表滚动松手时 pointer 仍在某项上 + pressed 仍 true → 误触发点击
+      const dist = Math.hypot(p.x - pointer.downX, p.y - pointer.downY);
+      if (dist > 8 && pointer.pressed) {
+        pointer.pressed = false;
+      }
     }
   }
 

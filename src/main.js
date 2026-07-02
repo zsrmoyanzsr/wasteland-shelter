@@ -40,22 +40,25 @@ let input = createInput(canvas);
 // 宽屏(电脑/平板横屏): 撑满,左侧竖向导航栏 + 更宽敞内容区(双栏感)
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // 读取安全区(刘海屏/全面屏: env(safe-area-inset-*)),PC 浏览器为 0
+  const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--safe-top") || "0", 10) || 0;
+  const safeBot = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--safe-bottom") || "0", 10) || 0;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const isWide = vw > vh * 0.85;
 
-  // 两种模式都撑满整个窗口(充分利用屏幕)
+  // 撑满窗口,但逻辑尺寸扣掉安全区(刘海屏顶部状态栏/底部 home 条不遮挡内容)
   LOGIC_W = vw;
-  LOGIC_H = vh;
+  LOGIC_H = vh - safeTop - safeBot;
   canvas.style.width = vw + "px";
-  canvas.style.height = vh + "px";
-  canvas.style.position = "static";
-  canvas.style.left = "auto";
-  canvas.style.top = "auto";
-  canvas.style.transform = "none";
+  canvas.style.height = LOGIC_H + "px";
+  canvas.style.position = "absolute";
+  canvas.style.left = "0px";
+  canvas.style.top = safeTop + "px";
   document.body.style.background = T.bg;
+  document.body.style.margin = "0";
   const app = document.getElementById("app");
-  if (app) app.style.cssText = "";
+  if (app) app.style.cssText = `position:fixed;inset:0;`;
 
   canvas.width = Math.round(LOGIC_W * dpr);
   canvas.height = Math.round(LOGIC_H * dpr);

@@ -7,6 +7,11 @@
     <title>废土避难所 · Wasteland Shelter</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        /* 安全区变量: 刘海屏顶部状态栏/底部 home 条让位,PC 浏览器 env() 返回 0 */
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+      }
       html, body {
         width: 100%;
         height: 100%;
