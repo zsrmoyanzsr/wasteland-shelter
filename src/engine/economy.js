@@ -83,9 +83,17 @@ export function tickEconomy(state, dt) {
 
   // 应用到资源(带容量上限,容量随基地等级提升)
   for (const k in delta) {
+    const before = state.res[k];
     state.res[k] += delta[k] * dt;
     const cap = getResCap(state, k);
     state.res[k] = Math.max(0, Math.min(cap, state.res[k]));
+    // 累计实际获得的产出(扣容量截断后),供成就/平衡统计
+    const gained = state.res[k] - before;
+    if (gained > 0) {
+      if (k === "food") state.stats.totalFood += gained;
+      else if (k === "water") state.stats.totalWater += gained;
+      else if (k === "parts") state.stats.totalParts += gained;
+    }
   }
 
   // 居民饥饿/口渴/心情更新(传每日等效量供需求计算)
@@ -152,7 +160,7 @@ function updateSurvivorNeeds(state, dt, { foodConsume, waterConsume }) {
 // 离线结算: 根据 lastTickAt 与当前时间差,按有限速率结算产出
 export function offlineSettle(state, nowMs) {
   const offlineMs = Math.max(0, nowMs - state.lastTickAt);
-  if (offlineMs < 5000) return 0; // 不足5秒不结算
+  if (offlineMs < 5000) return { offlineSec: 0, totalDelta: { food:0,water:0,parts:0,power:0,meds:0,scrap:0 } }; // 不足5秒不结算(返回类型统一)
   // 离线产出上限: 8 小时(避免挂机过久爆资源)
   const cappedSec = Math.min(offlineMs / 1000, 8 * 3600);
   // 用经济函数结算,但效率打 0.8 折(离线略低于在线)

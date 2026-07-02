@@ -593,3 +593,53 @@ prompt 模板: `"anime style, {角色描述}, post apocalyptic survivor, head po
 - 长测500天: 资源稳定不饿死,自产+废料场+商队维持发展
 - 前期 food/water 够活但 parts/meds/scrap 需派遣(开局0)
 - 后期 farm/well 升级后产能反超,符合节奏设计
+
+## v2.5.1 4-agent playtest 修复7个bug (本轮)
+
+> 派出4个 playtest 子agent,各自用不同玩法实际玩到600+天(建设/派遣/商队/UI综合),
+> 深度体验所有功能,发现并修复7个bug。**5套测试全过(test_deep增至65项)。**
+
+### playtest 方法
+- 4个并行子agent,每个headless玩600+天,覆盖不同功能流
+- 建设/派遣/商队/UI综合 各一个,确保所有功能被深度体验
+- 共发现9个问题,去重核实后7个真实bug,全部修复
+
+### 修复的bug
+
+#### Bug1【高】主循环无try/catch → 异常永久冻结游戏 (main.js)
+- 问题: render/update 抛异常时 requestAnimationFrame 不执行,游戏冻结无法操作
+- 修复: loop() 包 try/catch,异常时记日志+endFrame清理,绝不中断rAF
+- 验证: test_deep容错测试 ✅
+
+#### Bug2【高】poiInfo null 解引用崩溃 (screenDispatch.js)
+- 问题: 无效regionType(老存档/数据污染)时 poiInfo返回null,6处解引用info.icon/danger崩溃
+- 修复: settleExpedition加null守卫(强制finishExpedition收尾);drawExpeditionCard/drawRegionCard用兜底信息
+- 验证: test_deep"无效regionType不崩且正确收尾" ✅
+
+#### Bug3【中】派遣负reward双重扣减 (screenDispatch.js resolveEvent)
+- 问题: applyRewards后又有for循环对负reward再扣一次(raider交-3 scrap实际扣6)
+- 修复: 删除重复扣减循环;applyRewards加Math.max(0)下限保护
+- 验证: test_deep"负reward只扣一次"(扣3非6) ✅
+
+#### Bug4【高】袭击后期必然失效 (main.js triggerRaid)
+- 问题: 攻击=8+day*1.5线性无上限(day300=458),防御固定上限~129 → 81天后围墙形同虚设
+- 修复: 攻击收敛上限(min(day*1.5,100));防御加基地等级加成(+lv*8);损失随天数适度增长
+- 验证: test_deep"day300+满级围墙不再必然被击穿" ✅
+
+#### Bug5【中】stats.totalFood/Water/Parts 永远0 (economy.js)
+- 问题: 这些统计只在派遣奖励累加,设施产出从不计入 → 依赖统计的成就无法达成
+- 修复: tickEconomy应用delta时累计正产出到stats
+- 验证: test_deep"设施产出计入totalFood"(=23) ✅
+
+#### Bug6【低】任务/成就领奖容量口径不一致 (screenTasks.js)
+- 问题: 领奖用state.resCap(不含基地等级),商队用getResCap(含) → 高基地等级下领奖被卡更低上限
+- 修复: 统一用getResCap
+- 验证: 5套回归 ✅
+
+#### Bug7【低】base_upgrade progress可负 + offlineSettle返回类型不一致
+- 修复: progress加Math.max(0,...);offlineSettle不足5秒也返回对象(类型统一)
+
+### 测试
+- test_deep 增至 **65项**(+4: 袭击后期/stats累计/双重扣减/regionType容错)
+- **5套全过**: logic26 + edge14 + deep65 + ui27 + balance,全程0 console error
+- 4个playtest agent脚本跑完即删,不留痕

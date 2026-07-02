@@ -111,10 +111,10 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
 
 // 进行中/完成的探索卡片
 function drawExpeditionCard(ctx, ui, state, e, x, y, w, h, isDone) {
-  const info = poiInfo(e.regionType);
+  const info = poiInfo(e.regionType) || { icon: "❓", name: e.regionName || "未知", danger: 1 };
   fillRoundRect(ctx, x, y, w, h, T.radiusSm, T.panel, isDone ? T.accent : T.panelLine, isDone ? 2 : 1);
   icon(ctx, info.icon, x + 26, y + h / 2, 24);
-  text(ctx, e.regionName, x + 52, y + 12, { size: T.fontSm, color: T.text, weight: "700" });
+  text(ctx, e.regionName || info.name, x + 52, y + 12, { size: T.fontSm, color: T.text, weight: "700" });
   text(ctx, `${e.members.length}人 · ${e.state === "done" ? "已归来" : "探索中"}`, x + 52, y + 30, {
     size: T.fontXs,
     color: T.textDim,
@@ -151,7 +151,7 @@ function drawExpeditionCard(ctx, ui, state, e, x, y, w, h, isDone) {
 
 // 区域卡片(可派遣入口)
 function drawRegionCard(ctx, ui, state, poi, x, y, w, h) {
-  const info = poiInfo(poi.type);
+  const info = poiInfo(poi.type) || { icon: "📦", name: "未知地点", color: T.textMute, danger: 1, rewards: {} };
   const hover = inRect(ui.pointer.x, ui.pointer.y, x, y, w, h);
   fillRoundRect(ctx, x, y, w, h, T.radiusSm, hover ? T.panelHi : T.panel, info.color, hover ? 2 : 1);
   // 图标圆
@@ -419,6 +419,12 @@ const REWARD_SKILL = {
 
 function settleExpedition(state, e) {
   const info = poiInfo(e.regionType);
+  // 容错: regionType 无效(老存档/数据污染)时直接结束派遣,避免 info.danger 解引用崩溃
+  if (!info) {
+    console.warn("[dispatch] 无效 regionType:", e.regionType, ",强制结束派遣", e.id);
+    finishExpedition(state, e, 10);
+    return;
+  }
   const members = e.members.map((id) => state.survivors.find((s) => s.id === id)).filter(Boolean);
   const rng = e.rng;
 
@@ -464,7 +470,8 @@ function settleExpedition(state, e) {
 function applyRewards(state, rewards) {
   for (const k in rewards) {
     const cap = state.resCap[k] || Infinity;
-    state.res[k] = Math.min(cap, (state.res[k] || 0) + rewards[k]);
+    // 带下限保护: 负 reward(惩罚)不会让资源变负;正 reward 不超容量
+    state.res[k] = Math.max(0, Math.min(cap, (state.res[k] || 0) + rewards[k]));
     if (k === "food") state.stats.totalFood += rewards[k];
     if (k === "parts") state.stats.totalParts += rewards[k];
   }
@@ -571,13 +578,8 @@ function resolveEvent(state, e, choice, ctxObj) {
   }
   if (result.log) addLog(state, result.log.text, result.log.color);
 
-  // 结算完成: 发奖(含负值扣减),然后统一收尾
+  // 结算完成: applyRewards 已带 Math.max(0) 下限保护(负 reward 不会让资源变负)
   applyRewards(state, e.rewards);
-  for (const k in e.rewards) {
-    if (e.rewards[k] < 0) {
-      state.res[k] = Math.max(0, (state.res[k] || 0) + e.rewards[k]);
-    }
-  }
   finishExpedition(state, e, 25); // 释放成员 + 25XP + 计数 + 设 done
   state.modal = { type: "expeditionResult", expId: e.id, justResolved: true };
 }

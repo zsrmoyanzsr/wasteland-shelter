@@ -15,7 +15,7 @@ import {
 import { contentRect } from "./screenHud.js";
 import { taskDef, TASK_DEFS } from "../content/tasks.js";
 import { generateSurvivor, populationCap, PERKS } from "../content/survivors.js";
-import { addLog, addFloat } from "../engine/state.js";
+import { addLog, addFloat, getResCap } from "../engine/state.js";
 import { drawAvatar } from "../ui/avatar.js";
 import { totalDiscovered } from "../content/regions.js";
 import { ACHIEVEMENT_DEFS, achievementDef, rebuildProgress } from "../content/achievements.js";
@@ -211,9 +211,9 @@ function drawTaskCard(ctx, ui, state, t, x, y, w, h) {
       color: T.accent,
       glow: true,
     })) {
-      // 发奖
+      // 发奖(容量口径统一用 getResCap,含基地等级加成)
       for (const k in def.reward) {
-        const cap = state.resCap[k] || Infinity;
+        const cap = getResCap(state, k);
         state.res[k] = Math.min(cap, (state.res[k] || 0) + def.reward[k]);
       }
       t.claimed = true;
@@ -321,9 +321,10 @@ function drawAchievementCard(ctx, ui, state, adef, arec, x, y, w, h) {
       size: T.fontXs, color: "#0e1016", align: "center", baseline: "middle", weight: "700",
     });
     if (hover && ui.pointer.pressed) {
-      // 发奖
+      // 发奖(容量口径统一用 getResCap)
       for (const k in adef.reward) {
-        state.res[k] = Math.min(state.resCap[k] || 999, (state.res[k] || 0) + adef.reward[k]);
+        const cap = getResCap(state, k);
+        state.res[k] = Math.min(cap, (state.res[k] || 0) + adef.reward[k]);
       }
       arec.claimed = true;
       addLog(state, `成就达成: ${adef.name}!`, T.accent);

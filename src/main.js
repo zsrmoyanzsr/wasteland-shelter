@@ -277,7 +277,7 @@ function updateRaid(state, dt) {
 }
 
 function triggerRaid(state) {
-  // 防御值总和
+  // 防御值总和(围墙) + 居民 + 基地等级加成(让防御随发展成长,避免后期固定)
   let defense = 0;
   for (const f of state.base.facilities) {
     if (f.type === "wall") {
@@ -286,16 +286,20 @@ function triggerRaid(state) {
     }
   }
   const pop = state.survivors.filter((s) => !s.busy).length;
-  const totalDef = defense + pop * 2;
-  const attack = 8 + state.day * 1.5 + Math.random() * 10;
+  const totalDef = defense + pop * 2 + state.base.level * 8;
+  // 攻击随天数增长但有收敛上限(8 + day*1.5 收敛到 ~120),避免后期必然击穿
+  const dayFactor = Math.min(state.day * 1.5, 100);
+  const attack = 8 + dayFactor + Math.random() * 10;
   if (totalDef >= attack) {
     addLog(state, `抵御了一次掠夺者袭击! 防御 ${Math.floor(totalDef)} vs 攻击 ${Math.floor(attack)}`, T.primary);
   } else {
-    // 失败: 损失资源
-    const loss = Math.min(state.res.scrap * 0.3, 15);
-    state.res.scrap = Math.max(0, state.res.scrap - loss);
-    state.res.food = Math.max(0, state.res.food - 5);
-    addLog(state, `袭击突破防线! 损失 ${Math.floor(loss)} 废铁。建造围墙可防御。`, T.danger);
+    // 失败: 损失资源(随天数适度增长,后期有威慑但不致命)
+    const lossFactor = Math.min(state.day / 50, 3);
+    const scrapLoss = Math.min(state.res.scrap * 0.25, 10 + lossFactor * 8);
+    const foodLoss = 5 + lossFactor * 3;
+    state.res.scrap = Math.max(0, state.res.scrap - scrapLoss);
+    state.res.food = Math.max(0, state.res.food - foodLoss);
+    addLog(state, `袭击突破防线! 损失 ${Math.floor(scrapLoss)} 废铁、${Math.floor(foodLoss)} 食物。升级围墙与基地可防御。`, T.danger);
   }
 }
 
@@ -439,12 +443,20 @@ document.addEventListener("fullscreenchange", () => {
 // 注意顺序: 先 render 后 update。
 // 即时模式 UI 在 render 中读取 pointer.pressed 触发点击,
 // update 随后处理状态变更并 endFrame() 重置 pressed。
+// 关键: render/update 包 try/catch,任何异常都不能中断 rAF 否则游戏永久冻结
 let lastFrame = performance.now();
 function loop(now) {
   const dt = Math.min(0.1, (now - lastFrame) / 1000); // 上限 100ms 避免卡顿后大跳
   lastFrame = now;
-  render();
-  update(dt);
+  try {
+    render();
+    update(dt);
+  } catch (e) {
+    // 记录但不中断循环,避免单帧异常导致游戏冻结无法操作
+    console.error("[loop] frame error:", e);
+    // 确保单帧信号被清理,避免下一帧 UI 误触发
+    try { input.endFrame(); } catch {}
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

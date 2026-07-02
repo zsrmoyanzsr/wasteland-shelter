@@ -73,7 +73,7 @@ export const ACHIEVEMENT_DEFS = [
     desc: "主基地升级到 Lv.3",
     icon: "🏛️",
     check: (st) => st.base.level >= 3,
-    progress: (st) => Math.min(1, (st.base.level - 1) / 2),
+    progress: (st) => Math.max(0, Math.min(1, (st.base.level - 1) / 2)),
     reward: { scrap: 20, parts: 15 },
   },
   {
