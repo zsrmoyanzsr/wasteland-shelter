@@ -53,37 +53,61 @@ async function developAndRun(days) {
       // 每10天(1200秒)做一次发展决策
       if (sec > 0 && sec % 1200 === 0) {
         const day = Math.floor(sec / 120) + 1;
-        // 策略: 优先升农场到3级,然后建发电机、工坊、医疗室,升级基地,招人
         const facs = s.base.facilities;
-        const farmLv = facs.find(f=>f.type==="farm")?.level || 0;
+        const hasYard = facs.some(f=>f.type==="scrapyard");
         const hasGen = facs.some(f=>f.type==="generator");
         const hasWork = facs.some(f=>f.type==="workshop");
         const hasMed = facs.some(f=>f.type==="medbay");
 
-        if (farmLv < 3 && s.res.scrap >= 26 && s.res.parts >= 10) {
-          const f = facs.find(f=>f.type==="farm");
-          s.res.scrap -= 10 + f.level*8; s.res.parts -= 4 + f.level*3;
-          f.level++;
-        } else if (!hasGen && s.res.scrap >= 16 && s.res.parts >= 10) {
-          s.res.scrap -= 16; s.res.parts -= 10;
-          facs.push({ id: facs.length+1, type:"generator", level:1, assigned:[] });
-        } else if (!hasWork && s.res.scrap >= 20 && s.res.parts >= 9) {
-          s.res.scrap -= 20; s.res.parts -= 9;
-          facs.push({ id: facs.length+1, type:"workshop", level:1, assigned:[] });
-        } else if (!hasMed && s.res.scrap >= 22 && s.res.parts >= 13) {
-          s.res.scrap -= 22; s.res.parts -= 13;
-          facs.push({ id: facs.length+1, type:"medbay", level:1, assigned:[] });
-        } else if (s.base.level < 5 && s.res.scrap >= 20+s.base.level*15 && s.res.parts >= 10+s.base.level*8) {
-          // 升级基地
-          s.res.scrap -= 20+s.base.level*15; s.res.parts -= 10+s.base.level*8; s.res.food -= 10+s.base.level*5;
-          s.base.level++;
-        } else {
-          // 招人(若没满)
-          const cap = 2 + s.base.level * 2;
-          const pop = s.survivors.filter(x=>x.busy!=="dead").length;
-          if (pop < cap) {
-            s.survivors.push(sv.generateSurvivor(1, Math.random, 100+pop));
-            s.stats.survivorsRecruited++;
+        // 策略: 开局优先建废料场(产废铁)+发电机,然后工坊/医疗室,期间升农场/基地/招人
+        const tryBuild = (type, scrap, parts) => {
+          if (s.res.scrap >= scrap && s.res.parts >= parts) {
+            s.res.scrap -= scrap; s.res.parts -= parts;
+            facs.push({ id: facs.reduce((m,f)=>Math.max(m,f.id),0)+1, type, level:1, assigned:[] });
+            return true;
+          }
+          return false;
+        };
+        let built = false;
+        if (!hasYard) built = tryBuild("scrapyard", 8, 3);
+        else if (!hasGen) built = tryBuild("generator", 16, 10);
+        else if (!hasWork) built = tryBuild("workshop", 20, 9);
+        else if (!hasMed) built = tryBuild("medbay", 22, 13);
+
+        if (!built) {
+          // 升级: 优先基地(扩容),其次农场
+          if (s.base.level < 5 && s.res.scrap >= 20+s.base.level*15 && s.res.parts >= 10+s.base.level*8 && s.res.food >= 10+s.base.level*5) {
+            s.res.scrap -= 20+s.base.level*15; s.res.parts -= 10+s.base.level*8; s.res.food -= 10+s.base.level*5;
+            s.base.level++;
+          } else {
+            const farm = facs.find(f=>f.type==="farm");
+            if (farm && farm.level < 5 && s.res.scrap >= 10+farm.level*8 && s.res.parts >= 4+farm.level*3) {
+              s.res.scrap -= 10+farm.level*8; s.res.parts -= 4+farm.level*3;
+              farm.level++;
+            }
+          }
+        }
+
+        // 招人(若没满)
+        const cap = 2 + s.base.level * 2;
+        const pop = s.survivors.filter(x=>x.busy!=="dead").length;
+        if (pop < cap) {
+          s.survivors.push(sv.generateSurvivor(1, Math.random, 100+pop));
+          s.stats.survivorsRecruited++;
+        }
+
+        // 分配空闲居民到产能设施(farm→well→scrapyard→workshop→gen→med)
+        const idle = s.survivors.filter(x => x.busy!=="dead" && !x.assigned);
+        const order = ["farm","well","scrapyard","workshop","generator","medbay"];
+        for (const sv0 of idle) {
+          for (const t of order) {
+            const f = facs.find(ff => ff.type === t);
+            const stats = fac.facilityStats(t, f?.level || 1);
+            if (f && (f.assigned||[]).length < stats.jobs) {
+              f.assigned = [...(f.assigned||[]), sv0.id];
+              sv0.assigned = f.id;
+              break;
+            }
           }
         }
       }

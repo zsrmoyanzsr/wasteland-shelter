@@ -20,7 +20,7 @@ export const POI_TYPES = {
     color: "#e0588e",
     danger: 2,
     desc: "曾是人满为患的避难所,如今只剩药品与低语。",
-    rewards: { meds: [3, 7], parts: [0, 3], scrap: [2, 6] },
+    rewards: { meds: [3, 7], parts: [0, 3], scrap: [4, 9] },
   },
   town: {
     type: "town",
@@ -29,7 +29,7 @@ export const POI_TYPES = {
     color: "#c9a86a",
     danger: 1,
     desc: "废弃的街道与商铺,废铁与零件的宝库。",
-    rewards: { scrap: [4, 9], parts: [1, 4], food: [1, 4] },
+    rewards: { scrap: [7, 14], parts: [1, 4], food: [1, 4] },
   },
   factory: {
     type: "factory",
@@ -38,7 +38,7 @@ export const POI_TYPES = {
     color: "#9aa1b0",
     danger: 3,
     desc: "重型机械与危险废料,零件与蓝图产地。",
-    rewards: { parts: [3, 8], scrap: [2, 6], power: [0, 3] },
+    rewards: { parts: [3, 8], scrap: [5, 11], power: [0, 3] },
   },
   military: {
     type: "military",
@@ -47,7 +47,7 @@ export const POI_TYPES = {
     color: "#5b9bd5",
     danger: 4,
     desc: "封锁的军事区,藏有稀缺武器与电力设备。",
-    rewards: { parts: [4, 9], power: [2, 6], meds: [1, 4] },
+    rewards: { parts: [4, 9], scrap: [6, 13], power: [2, 6], meds: [1, 4] },
   },
   cache: {
     type: "cache",
@@ -56,7 +56,7 @@ export const POI_TYPES = {
     color: "#f0a93b",
     danger: 1,
     desc: "幸存者藏匿的补给箱。",
-    rewards: { food: [2, 5], water: [2, 5], scrap: [1, 4] },
+    rewards: { food: [2, 5], water: [2, 5], scrap: [3, 7] },
   },
 };
 
