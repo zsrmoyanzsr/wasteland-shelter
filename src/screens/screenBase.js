@@ -53,28 +53,54 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
   const exploreY = cr.y + 58 + guideH;
   drawExploreEntry(ctx, ui, state, 16, exploreY, cr.w - 32, 52);
 
-  // 已建设施网格
-  const gridY = exploreY + 60;
-  text(ctx, "已建设施", 16, gridY, { size: T.fontMd, color: T.text, weight: "600" });
+  // 已建设施网格 + 建造面板: 统一放进可滚动区域,避免内容多时被底部导航遮挡
+  const scrollY = exploreY + 60;
+  text(ctx, "已建设施", 16, scrollY, { size: T.fontMd, color: T.text, weight: "600" });
+  const scrollBoxY = scrollY + 22;
+  const scrollBoxH = cr.y + cr.h - scrollBoxY - 8; // 内容区底部,不侵入导航栏
 
   const facs = state.base.facilities;
   const cardW = Math.min(220, (cr.w - 32 - 12) / 2);
   const cardH = 96;
-  let gx = 16;
-  let gy = gridY + 22;
 
-  facs.forEach((fac, i) => {
-    if (gx + cardW > cr.w - 16) {
-      gx = 16;
-      gy += cardH + 8;
-    }
-    drawFacilityCard(ctx, ui, state, fac, gx, gy, cardW, cardH);
-    gx += cardW + 10;
+  // 先算总内容高度(设施网格 + 建造面板)
+  const facRows = Math.ceil(facs.length / 2);
+  const facTotalH = facRows * (cardH + 8);
+  const buildPanelH = 38 + Math.ceil(7 / Math.max(3, Math.floor((cr.w - 20) / 100))) * (96 + 8) + 16;
+  const contentTotalH = facTotalH + 20 + buildPanelH;
+  const maxScroll = Math.max(0, contentTotalH - scrollBoxH);
+
+  // 滚轮
+  if (inRect(ui.pointer.x, ui.pointer.y, 12, scrollBoxY, cr.w - 24, scrollBoxH)) {
+    const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
+    if (wheel) state._baseScroll = Math.max(0, Math.min(maxScroll, (state._baseScroll || 0) + wheel * 0.5));
+  }
+  const yOff = state._baseScroll || 0;
+
+  clipRound(ctx, 12, scrollBoxY, cr.w - 24, scrollBoxH, T.radius, () => {
+    let gx = 16;
+    let gy = scrollBoxY - yOff;
+    facs.forEach((fac) => {
+      if (gx + cardW > cr.w - 16) {
+        gx = 16;
+        gy += cardH + 8;
+      }
+      drawFacilityCard(ctx, ui, state, fac, gx, gy, cardW, cardH);
+      gx += cardW + 10;
+    });
+    // 建造面板紧跟设施网格之后
+    const buildY = gy + cardH + 20;
+    drawBuildPanel(ctx, ui, state, 16, buildY, cr.w - 32, buildPanelH);
   });
 
-  // 建造按钮区
-  const buildY = gy + cardH + 20;
-  drawBuildPanel(ctx, ui, state, 16, buildY, cr.w - 32, H - HUD_BOTTOM_H_OVERLAP(buildY, H));
+  // 滚动条(溢出时)
+  if (maxScroll > 0) {
+    const trackX = cr.w - 8;
+    fillRoundRect(ctx, trackX, scrollBoxY, 3, scrollBoxH, 1.5, T.panelLine);
+    const thumbH = Math.max(30, (scrollBoxH / contentTotalH) * scrollBoxH);
+    const thumbY = scrollBoxY + (yOff / maxScroll) * (scrollBoxH - thumbH);
+    fillRoundRect(ctx, trackX, thumbY, 3, thumbH, 1.5, T.textDim);
+  }
 
   // 模态由 main.js 集中绘制(防点击穿透)
 }

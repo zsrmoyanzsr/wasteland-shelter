@@ -52,59 +52,83 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
   // 引导横幅
   const guideH = drawGuideBanner(ctx, ui, state, 14, cr.y + 56, cr.w - 28);
 
-  // 进行中的探索
-  let yy = cr.y + 62 + guideH;
+  // 列表区: 进行中 + 完成 + 可派遣区域,整体放进可滚动容器,避免溢出被导航栏遮挡
+  const listBoxY = cr.y + 62 + guideH;
+  const listBoxH = cr.y + cr.h - listBoxY - 8;
+
+  // 滚轮
+  if (inRect(ui.pointer.x, ui.pointer.y, 12, listBoxY, cr.w - 24, listBoxH)) {
+    const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
+    if (wheel) state._dispatchScroll = Math.max(0, (state._dispatchScroll || 0) + wheel * 0.5);
+  }
+
   const running = state.expeditions.filter((e) => e.state !== "done");
-  if (running.length) {
-    text(ctx, "进行中", 16, yy, { size: T.fontSm, color: T.info, weight: "700" });
-    yy += 22;
-    for (const e of running) {
-      drawExpeditionCard(ctx, ui, state, e, 12, yy, cr.w - 24, 64);
-      yy += 70;
-    }
-  }
-
-  // 完成待领
   const done = state.expeditions.filter((e) => e.state === "done");
-  if (done.length) {
-    yy += 6;
-    text(ctx, "✅ 探索完成(点击查看)", 16, yy, { size: T.fontSm, color: T.accent, weight: "700" });
-    yy += 22;
-    for (const e of done) {
-      drawExpeditionCard(ctx, ui, state, e, 12, yy, cr.w - 24, 56, true);
-      yy += 62;
+
+  // 计算总内容高度用于滚动上限
+  let totalH = 0;
+  if (running.length) totalH += 22 + running.length * 70;
+  if (done.length) totalH += 28 + done.length * 62;
+  totalH += 32; // "可探索区域"标题
+  if (disc.length === 0) totalH += 80;
+  else totalH += disc.length * 84;
+  const maxScroll = Math.max(0, totalH - listBoxH);
+  state._dispatchScroll = Math.min(state._dispatchScroll || 0, maxScroll);
+  const yOff = state._dispatchScroll || 0;
+
+  clipRound(ctx, 12, listBoxY, cr.w - 24, listBoxH, T.radius, () => {
+    let yy = listBoxY - yOff;
+    // 进行中的探索
+    if (running.length) {
+      text(ctx, "进行中", 16, yy, { size: T.fontSm, color: T.info, weight: "700" });
+      yy += 22;
+      for (const e of running) {
+        drawExpeditionCard(ctx, ui, state, e, 12, yy, cr.w - 24, 64);
+        yy += 70;
+      }
     }
-  }
+    // 完成待领
+    if (done.length) {
+      yy += 6;
+      text(ctx, "✅ 探索完成(点击查看)", 16, yy, { size: T.fontSm, color: T.accent, weight: "700" });
+      yy += 22;
+      for (const e of done) {
+        drawExpeditionCard(ctx, ui, state, e, 12, yy, cr.w - 24, 56, true);
+        yy += 62;
+      }
+    }
+    // 可派遣区域
+    yy += 8;
+    text(ctx, "📍 可探索区域", 16, yy, { size: T.fontSm, color: T.textDim, weight: "700" });
+    yy += 24;
 
-  // 可派遣区域
-  yy += 8;
-  text(ctx, "📍 可探索区域", 16, yy, { size: T.fontSm, color: T.textDim, weight: "700" });
-  yy += 24;
-
-  if (disc.length === 0) {
-    fillRoundRect(ctx, 12, yy, cr.w - 24, 80, T.radius, T.panel, T.panelLine, 1);
-    icon(ctx, "🌫️", cr.w / 2, yy + 30, 28);
-    text(ctx, "尚未发现任何地点", cr.w / 2, yy + 56, {
-      size: T.fontSm,
-      color: T.textDim,
-      align: "center",
-    });
-    text(ctx, "前往「地图」行走探索,揭开迷雾", cr.w / 2, yy + 72, {
-      size: T.fontXs,
-      color: T.textMute,
-      align: "center",
-    });
-    return;
-  }
-
-  clipRound(ctx, 12, yy, cr.w - 24, cr.y + cr.h - yy - 8, T.radius, () => {
+    if (disc.length === 0) {
+      fillRoundRect(ctx, 12, yy, cr.w - 24, 80, T.radius, T.panel, T.panelLine, 1);
+      icon(ctx, "🌫️", cr.w / 2, yy + 30, 28);
+      text(ctx, "尚未发现任何地点", cr.w / 2, yy + 56, {
+        size: T.fontSm, color: T.textDim, align: "center",
+      });
+      text(ctx, "前往「地图」行走探索,揭开迷雾", cr.w / 2, yy + 72, {
+        size: T.fontXs, color: T.textMute, align: "center",
+      });
+      return;
+    }
+    // POI 卡片
     let cy = yy;
     for (const poi of disc) {
-      if (cy > cr.y + cr.h) break;
       drawRegionCard(ctx, ui, state, poi, 12, cy, cr.w - 24, 78);
       cy += 84;
     }
   });
+
+  // 滚动条
+  if (maxScroll > 0) {
+    const trackX = cr.w - 8;
+    fillRoundRect(ctx, trackX, listBoxY, 3, listBoxH, 1.5, T.panelLine);
+    const thumbH = Math.max(30, (listBoxH / totalH) * listBoxH);
+    const thumbY = listBoxY + (yOff / maxScroll) * (listBoxH - thumbH);
+    fillRoundRect(ctx, trackX, thumbY, 3, thumbH, 1.5, T.textDim);
+  }
 
   // 模态由 main.js 集中绘制(防点击穿透)
 }

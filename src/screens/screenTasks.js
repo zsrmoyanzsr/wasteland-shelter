@@ -74,33 +74,46 @@ export function drawTasksScreen(ctx, state, ui, W, H) {
   drawRadioPanel(ctx, ui, state, 12, yy, cr.w - 24, 110);
   yy += 122;
 
+  // 任务列表 + 成就列表: 按可用空间比例分配,各自独立滚动,互不挤压
+  const availH = cr.y + cr.h - yy - 8; // 剩余可用高度(到内容区底部)
+  const taskListH = Math.min(160, availH * 0.4); // 任务区占40%(上限160)
+  const achListH = Math.max(80, availH - taskListH - 52); // 成就区占剩余(扣两标题)
+
   // 任务列表(可滚动)
   text(ctx, "📋 任务", 16, yy, { size: T.fontSm, color: T.text, weight: "700" });
   yy += 22;
-  const listH = Math.min(180, (cr.y + cr.h) - yy - 150);
   const tasksTotal = state.tasks.length * 66;
   let yOff = state._taskScroll || 0;
-  const maxScroll = Math.max(0, tasksTotal - listH);
-  if (inRect(ui.pointer.x, ui.pointer.y, 12, yy, cr.w - 24, listH)) {
+  const maxScroll = Math.max(0, tasksTotal - taskListH);
+  if (inRect(ui.pointer.x, ui.pointer.y, 12, yy, cr.w - 24, taskListH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
     if (wheel) yOff += wheel * 0.4;
   }
   yOff = Math.max(0, Math.min(maxScroll, yOff));
   state._taskScroll = yOff;
-  clipRound(ctx, 12, yy, cr.w - 24, listH, T.radius, () => {
+  clipRound(ctx, 12, yy, cr.w - 24, taskListH, T.radius, () => {
     let cy = yy - yOff;
     for (const t of state.tasks) {
       drawTaskCard(ctx, ui, state, t, 12, cy, cr.w - 24, 60);
       cy += 66;
     }
   });
-  yy += listH + 8;
+  yy += taskListH + 8;
 
-  // 成就列表
+  // 成就列表(可滚动,固定高度不溢出导航栏)
   text(ctx, "🏆 成就", 16, yy, { size: T.fontSm, color: T.text, weight: "700" });
   yy += 22;
-  clipRound(ctx, 12, yy, cr.w - 24, (cr.y + cr.h) - yy - 8, T.radius, () => {
-    let cx = 16, cy = yy;
+  const achTotal = Math.ceil(state.achievements.length / 2) * 62;
+  let achOff = state._achScroll || 0;
+  const achMaxScroll = Math.max(0, achTotal - achListH);
+  if (inRect(ui.pointer.x, ui.pointer.y, 12, yy, cr.w - 24, achListH)) {
+    const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
+    if (wheel) achOff += wheel * 0.4;
+  }
+  achOff = Math.max(0, Math.min(achMaxScroll, achOff));
+  state._achScroll = achOff;
+  clipRound(ctx, 12, yy, cr.w - 24, achListH, T.radius, () => {
+    let cx = 16, cy = yy - achOff;
     const cardW = (cr.w - 32 - 8) / 2;
     let i = 0;
     for (const arec of state.achievements) {
