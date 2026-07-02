@@ -23,6 +23,7 @@ import { drawDispatchScreen, updateExpeditions } from "./screens/screenDispatch.
 import { drawTasksScreen, updateTasks } from "./screens/screenTasks.js";
 import { updatePlayer, updateExplore } from "./engine/worldUpdate.js";
 import { updateUnlocks, currentMap, totalDiscovered } from "./content/regions.js";
+import { updateCaravan } from "./engine/caravan.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -246,6 +247,7 @@ function update(dt) {
   updateTasks(state);
   checkAchievements(state);
   updateRaid(state, scaledDt);
+  updateCaravan(state, scaledDt);
 
   // 浮动文字
   for (const f of state.floats) {
@@ -366,10 +368,16 @@ import {
 } from "./screens/screenDispatch.js";
 import { drawRecruitModal as _drawRecruit } from "./screens/screenTasks.js";
 import { drawExploreEventModal as _drawExploreEvent } from "./screens/screenExploreEvent.js";
+import { drawTradeModal as _drawTrade } from "./screens/screenTrade.js";
 
 function drawActiveModal(ctx, state, ui, W, H) {
   const m = state.modal;
   if (!m) return;
+  // 交易模态: 全局(任何屏都能弹),不绑定特定 screen
+  if (m.type === "trade") {
+    _drawTrade(ctx, ui, state, W, H);
+    return;
+  }
   switch (state.screen) {
     case SCREEN.BASE:
       if (m.type === "upgradeFacility") _drawUpgrade(ctx, ui, state, W, H);

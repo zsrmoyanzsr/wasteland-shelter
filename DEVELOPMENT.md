@@ -4,7 +4,7 @@
 > 从零接手也能在 30 分钟内跑通游戏、1 小时内动手改第一个功能。
 >
 > 文档与代码同步更新规则：**每次改了架构/数据结构/关键逻辑，必须同步更新本文对应章节。**
-> 最后更新：v2.3.1（经济平衡修复：加废料场设施 + 提高派遣废铁奖励）。
+> 最后更新：v2.4（流浪商队交易系统）。
 
 ---
 
@@ -262,8 +262,11 @@ function loop(now) {
 | dispatch | event | screenDispatch.drawEventModal | 派遣事件 |
 | dispatch | expeditionResult | screenDispatch.drawResultModal | 派遣结果 |
 | tasks | recruitConfirm | screenTasks.drawRecruitModal | 招募确认 |
+| **全局(任意屏)** | **trade** | **screenTrade.drawTradeModal** | **流浪商队交易** |
 
-**加新模态**：1) 在对应 screen 文件写 `drawXxxModal` 并 export；2) 在 `main.js` 的 `drawActiveModal` 加路由分支。
+> **全局模态**：trade 模态在 `drawActiveModal` 开头用 `if (m.type === "trade")` 顶层判断,**不绑定 screen**,任意屏都能弹(商队到访时若玩家正在别的屏)。这是全局模态的唯一特例。
+
+**加新模态**：1) 在对应 screen 文件写 `drawXxxModal` 并 export；2) 在 `main.js` 的 `drawActiveModal` 加路由分支（绑定 screen 的进 switch；全局的在 switch 前顶层判断）。
 读档时 `s.modal = null`（不恢复弹窗，避免指向已变化的实体）。
 
 ### 3.5 游戏循环（update）
@@ -609,6 +612,7 @@ node shot_map.mjs      # 地图截图(验证图标渲染,人工看图)
 | **v2.2.1** | **深度测试修复6个bug(网格揭示相邻格/派遣无事件分支结算/info.loot缺失/派遣入口阻塞/居民消耗/空数组存档迁移)+ 新增test_deep+test_ui_e2e共64项** | **progress.md + 本文档** |
 | **v2.3** | **新手引导系统 + hunger平衡修复(食物满仓不再饿死) + 派遣状态机重构(防Bug2同类) + 数值长测(test_balance) + 后期经济瓶颈记录** | **progress.md + 本文档** |
 | **v2.3.1** | **经济平衡修复: 加废料场设施(稳定产废铁)+ 提高派遣废铁奖励,解决后期废铁枯竭卡死发展** | **progress.md + 本文档** |
+| **v2.4** | **流浪商队交易系统: 每6-9天稀有到访,智能生成3个高价值方案(用富余换稀缺),解决后期爆仓+增加决策乐趣** | **progress.md + 本文档** |
 
 ## 附录 B：关键常量速查
 

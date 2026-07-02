@@ -38,8 +38,12 @@ const migrations = {
     s.version = 2;
     // 注: 深度字段(survivor.skills 等)由 mergeDefaults 统一补,这里只做版本特定逻辑
   },
-  // 以后加版本:
-  // 3: (s) => { s.player.inventory = s.player.inventory || []; s.version = 3; },
+  // v2 → v3: 加入 流浪商队(caravan)字段
+  3: (s) => {
+    if (!s.caravan) s.caravan = { timer: 720, here: false, leaveTimer: 0, offers: [] };
+    s.version = 3;
+    // 注: 深度字段由 mergeDefaults 统一补
+  },
 };
 
 export function saveGame(state) {
@@ -223,6 +227,13 @@ function mergeDefaults(s) {
   for (const k of ["explored", "dispatched", "built", "recruited"]) {
     if (s.guide[k] == null) s.guide[k] = false;
   }
+
+  // caravan(流浪商队)
+  if (!s.caravan) s.caravan = { ...DEFAULTS.caravan };
+  if (s.caravan.timer == null) s.caravan.timer = DEFAULTS.caravan.timer;
+  if (s.caravan.here == null) s.caravan.here = false;
+  if (s.caravan.leaveTimer == null) s.caravan.leaveTimer = 0;
+  if (!Array.isArray(s.caravan.offers)) s.caravan.offers = [];
 
   // maps: 重建若缺失,补全缺失地图
   if (!s.maps) s.maps = createMaps();

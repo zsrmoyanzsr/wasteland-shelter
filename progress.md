@@ -500,3 +500,44 @@ prompt 模板: `"anime style, {角色描述}, post apocalyptic survivor, head po
 - 加废料场只改了 facilities.js 一个文件(FACILITY_TYPES 加一项),其余全适配:
   建造菜单/经济结算/技能映射/特长江成/测试断言 全部自动生效
 - 印证 DEVELOPMENT.md §6.1 "加新设施无需改引擎"的设计目标
+
+## v2.4 流浪商队交易系统 (本轮)
+
+> 新增"稀有商队到访"交易循环:每6-9天到访,带3个高价值方案(用富余换稀缺),
+> 解决后期爆仓 + 增加决策乐趣。**5套测试全过(test_deep增至56项),全程无console error。**
+
+### 设计目标
+- 解决后期"食物/水/电爆仓无用"问题:用爆仓资源换稀缺的零件/药品
+- 增加决策乐趣:每次到访3个方案,玩家判断值不值(商队加价40%,贵但即时)
+- 稀有到访(6-9天),不刷屏;限时停留(2-3天),制造"要不要现在交易"的紧迫感
+
+### 新增文件
+- `src/engine/caravan.js` — 商队核心逻辑(updateCaravan/arriveCaravan/generateOffers/generateOffer/takeOffer/departCaravan)
+- `src/screens/screenTrade.js` — 交易模态 UI(drawTradeModal)
+
+### 改动文件
+- `src/engine/state.js` — 加 state.caravan 默认值 + DEFAULTS + CURRENT_VERSION 2→3
+- `src/engine/save.js` — migrations[3] + mergeDefaults caravan 子句(老v2存档自动迁移)
+- `src/main.js` — update() 调 updateCaravan + drawActiveModal 加 trade 顶层路由(全局模态)
+
+### 核心机制
+1. **到访**: updateCaravan 照抄 updateRaid 模式,timer 到 0 → arriveCaravan(生成3方案+开模态+日志)
+2. **智能方案**: 扫描玩家资源,自动用"持有最多的"换"稀缺的"(parts/meds 优先),保证交易有价值
+3. **汇率**: 资源分3档(富余food/water/scrap=1 / 中间power=1.8 / 稀缺parts=3,meds=3.2),
+   按价值守恒 × 商队加价1.4 → 玩家略亏但能即时获得稀缺物
+4. **交易**: takeOffer 验证够付→扣付出→加获得(带上限)→标taken→日志反馈
+5. **离开**: 在场 leaveTimer 到点自动走 / 玩家可主动"送商队离开";离开后重置 timer 6-9天
+
+### 全局模态(架构特例)
+- 现有模态都绑定特定 screen(drawActiveModal 的 switch(state.screen) 结构)
+- trade 模态在 switch 前用顶层判断 `if(m.type==="trade")`,任何屏都能弹
+- 这是唯一的全局模态特例,已记录到 DEVELOPMENT.md §3.4
+
+### 测试(test_deep 新增13项,共56项)
+- 到访触发/方案结构合法/汇率合理(付出价值≥获得价值)
+- takeOffer 扣给加得/标taken/不可重复/资源不足失败不崩
+- 在场超时自动离开/timer重置
+- 存档迁移 v2→v3 补 caravan 字段
+
+### 已知小细节
+- AI视觉分析发现:当玩家只有1-2种富余资源时,3个方案的付出资源可能相同(已优化:尽量分散,但极端情况下仍可能重复)。功能正常,获得资源不同,体验可接受

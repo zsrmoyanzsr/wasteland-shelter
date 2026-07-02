@@ -20,7 +20,7 @@ export const SCREEN = {
 
 // 存档版本号: 每次结构性改动(加字段/改结构)时 +1
 // 老存档读档时会按 migrations 链逐步升级到此版本
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 
 export function createNewState() {
   const st = {
@@ -136,6 +136,14 @@ export function createNewState() {
       recruited: false,    // 是否招募过幸存者
       dismissed: [],       // 已关闭的提示 id(不再弹)
     },
+
+    // 流浪商队: 稀有到访的交易系统(每6-9游戏天到访一次,带3个高价值方案)
+    caravan: {
+      timer: 720, // 首次到访倒计时(秒);到访后重置为 720+random*360 (6-9天)
+      here: false, // 商队是否在场
+      leaveTimer: 0, // 在场剩余时间(秒),到点自动离开
+      offers: [], // 当前交易方案 [{give:{资源:量}, get:{资源:量}, taken:false}]
+    },
   };
   // 主角初始位置 = home 地图入口格中心
   const homeMap = currentMap(st);
@@ -215,6 +223,8 @@ export const DEFAULTS = {
   raid: { timer: 600, threat: 0 },
   // 新手引导(mergeDefaults 补全)
   guide: { explored: false, dispatched: false, built: false, recruited: false, dismissed: [] },
+  // 流浪商队(mergeDefaults 补全)
+  caravan: { timer: 720, here: false, leaveTimer: 0, offers: [] },
   // 单个幸存者的可缺失字段默认值
   survivor: {
     perks: [],

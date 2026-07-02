@@ -38,6 +38,12 @@
 - **10 个累计成就**: 基于统计的长远目标(招募5人/探索12地点/全地图解锁等)
 - **重建进度%**: 综合基地/人口/设施/探索的元进度条
 
+### 🛒 流浪商队交易
+- **稀有到访**: 每 6-9 游戏天一支商队到访,停留约 2-3 天后离去
+- **智能方案**: 自动用你富余的资源(食物/水/废铁)换稀缺物资(零件/药品/电力),解决后期爆仓
+- **高价但值得**: 商队价格比自产贵 ~40%,但能即时获得稀缺物,关键时刻值得交易
+- **3 个方案**: 每次带来 3 个不同交易,可全做或放弃,限时决定
+
 ### 💾 健壮存档系统 (v2)
 - **版本化迁移**: 加新字段/内容老存档永不丢、永不崩
 - **深度默认值合并**: 自动补全所有缺失嵌套字段
@@ -92,6 +98,7 @@ src/
     economy.js         # 资源产出/消耗/医疗治疗/技能加成
     save.js            # 版本化存档(迁移链/默认合并/备份/验证)
     worldUpdate.js     # 主角移动/网格探索/事件触发/传送
+    caravan.js         # 流浪商队交易系统(到访/方案/交易)
     avatarLoader.js    # 立绘加载(内联base64)
   ui/
     ui.js              # 即时模式 UI 原语
@@ -99,7 +106,7 @@ src/
     theme.js           # 配色/字号
     avatar.js          # 程序化头像兜底
   screens/
-    screenStart/Hud/Base/Map/Roster/Dispatch/Tasks/ExploreEvent.js
+    screenStart/Hud/Base/Map/Roster/Dispatch/Tasks/ExploreEvent/Trade.js
   content/
     survivors.js       # 职业/特长/技能/生成器/升级
     facilities.js      # 设施定义

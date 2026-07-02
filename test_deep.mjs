@@ -192,7 +192,7 @@ const migrateTest = await page.evaluate(async () => {
   };
 });
 T("存档迁移 v1→v2: 加载成功", migrateTest.loaded, "");
-T("存档迁移: version升到2", migrateTest.version === 2, "version=" + migrateTest.version);
+T("存档迁移: version升到最新(3)", migrateTest.version === 3, "version=" + migrateTest.version);
 T("存档迁移: 老map→新maps结构", migrateTest.hasMaps && migrateTest.mapRemoved, `hasMaps=${migrateTest.hasMaps} mapRemoved=${migrateTest.mapRemoved}`);
 T("存档迁移: player补全health", migrateTest.hasHealth, "");
 T("存档迁移: survivor补全6技能", migrateTest.hasSkills, "");
@@ -498,6 +498,107 @@ const dispatchBoth = await page.evaluate(async () => {
 });
 T("[派遣重构] 无事件分支: done+成员释放", dispatchBoth.noEventOk, `state done & m1 free=${dispatchBoth.m1Free}`);
 T("[派遣重构] 有事件分支: 正确触发event", dispatchBoth.eventTriggered, "");
+
+// ═══════════ 盲区24: 流浪商队交易系统 ═══════════
+const caravan = await page.evaluate(async () => {
+  const s = window.__game.state;
+  const car = await import("/src/engine/caravan.js");
+  // 重置商队状态
+  s.caravan = { timer: 720, here: false, leaveTimer: 0, offers: [] };
+  s.modal = null;
+
+  // 1. 到访触发
+  s.caravan.timer = 0.001;
+  car.updateCaravan(s, 1);
+  const arrived = s.caravan.here && s.caravan.offers.length === 3;
+  const modalOpened = s.modal?.type === "trade";
+
+  // 2. 方案结构合法
+  const offerOk = s.caravan.offers.every(o =>
+    o.give && o.get && !o.taken &&
+    Object.keys(o.give).length >= 1 && Object.keys(o.get).length >= 1
+  );
+
+  // 3. 汇率合理(付出价值 > 获得价值,商队加价)
+  const V = car._internals.VALUE;
+  const rateOk = s.caravan.offers.every(o => {
+    const gv = Object.entries(o.give).reduce((s,[k,v])=>s+v*V[k],0);
+    const xv = Object.entries(o.get).reduce((s,[k,v])=>s+v*V[k],0);
+    return gv >= xv; // 付出价值应≥获得价值(加价)
+  });
+
+  // 4. takeOffer 扣给加得 + 资源不超容
+  const before = { ...s.res };
+  const offer0 = s.caravan.offers[0];
+  const giveKey = Object.keys(offer0.give)[0];
+  const getKey = Object.keys(offer0.get)[0];
+  s.res[giveKey] = Math.max(offer0.give[giveKey], s.res[giveKey]); // 确保够付
+  s.res[getKey] = 0; // 清空获得资源,确保有增加空间(避免满仓截断)
+  const giveBefore = s.res[giveKey], getBefore = s.res[getKey];
+  const ok = car.takeOffer(s, 0);
+  const giveAfter = s.res[giveKey], getAfter = s.res[getKey];
+  const tradeOk = ok && giveAfter === giveBefore - offer0.give[giveKey] && offer0.taken;
+  const getIncreased = getAfter > getBefore;
+
+  // 5. 重复交易被拒(已taken)
+  const dup = car.takeOffer(s, 0);
+
+  // 6. 资源不足时交易失败
+  s.caravan.offers[1] = { give: { parts: 99999 }, get: { food: 1 }, taken: false };
+  const failNoRes = car.takeOffer(s, 1) === false;
+
+  return { arrived, modalOpened, offerOk, rateOk, tradeOk, getIncreased, dupRejected: dup === false, failNoRes };
+});
+T("[商队] timer到0→到访+生成3方案", caravan.arrived, `here=${caravan.arrived}`);
+T("[商队] 到访自动开trade模态", caravan.modalOpened, "");
+T("[商队] 方案结构合法(give/get/taken)", caravan.offerOk, "");
+T("[商队] 汇率合理(付出价值≥获得价值,有加价)", caravan.rateOk, "");
+T("[商队] takeOffer: 扣付出+标taken", caravan.tradeOk, "");
+T("[商队] takeOffer: 获得资源增加", caravan.getIncreased, "");
+T("[商队] 已交易方案不可重复", caravan.dupRejected, "");
+T("[商队] 资源不足时交易失败(不崩)", caravan.failNoRes, "");
+
+// ═══════════ 盲区25: 商队在场超时自动离开 ═══════════
+const caravanLeave = await page.evaluate(async () => {
+  const s = window.__game.state;
+  const car = await import("/src/engine/caravan.js");
+  s.caravan = { timer: 720, here: true, leaveTimer: 10, offers: [{give:{food:1},get:{parts:1},taken:false}] };
+  s.modal = null;
+  car.updateCaravan(s, 20); // 超过 leaveTimer
+  return { left: !s.caravan.here, timerReset: s.caravan.timer > 100, offersCleared: s.caravan.offers.length === 0 };
+});
+T("[商队] 在场超时自动离开", caravanLeave.left, "");
+T("[商队] 离开后重置到访timer", caravanLeave.timerReset, "timer=" + (caravanLeave.timerReset ? "重置" : "未重置"));
+
+// ═══════════ 盲区26: 存档迁移 v2→v3 补 caravan 字段 ═══════════
+const migrateV3 = await page.evaluate(async () => {
+  const saveMod = await import("/src/engine/save.js");
+  // 构造一个 v2 存档(无 caravan 字段)
+  const v2save = {
+    version: 2, savedAt: Date.now(),
+    state: { version: 2, screen:"base", tab:"base", time:100, day:1, timeOfDay:0.3, speed:1, fullscreen:false,
+      res:{food:50,water:50,parts:20,power:10,meds:8,scrap:30}, resCap:{food:100,water:100,parts:100,power:50,meds:50,scrap:100},
+      base:{level:1,facilities:[]}, survivors:[], nextSurvivorId:100, radio:{candidate:null,cooldown:0},
+      player:{x:0,y:0,tx:0,ty:0,moveSpeed:110,stamina:100,maxStamina:100,health:100,maxHealth:100},
+      expeditions:[], nextExpeditionId:1, tasks:[], achievements:[], stats:{totalFood:0,totalWater:0,totalParts:0,expeditionsDone:0,survivorsRecruited:0,facilitiesBuilt:0},
+      log:[], floats:[], modal:null, raid:{timer:600,threat:0}, guide:{explored:false,dispatched:false,built:false,recruited:false,dismissed:[]}
+      // 注意: 无 caravan 字段
+    }
+  };
+  localStorage.removeItem("wasteland_shelter_save_v2");
+  localStorage.setItem("wasteland_shelter_save_v2", JSON.stringify(v2save));
+  const loaded = saveMod.loadGame();
+  return {
+    loaded: !!loaded,
+    version: loaded?.version,
+    hasCaravan: loaded?.caravan != null,
+    caravanHasTimer: loaded?.caravan?.timer != null,
+    caravanHasOffers: Array.isArray(loaded?.caravan?.offers),
+  };
+});
+T("[存档迁移 v2→v3] 加载成功", migrateV3.loaded, "");
+T("[存档迁移 v2→v3] version升到3", migrateV3.version === 3, "v=" + migrateV3.version);
+T("[存档迁移 v2→v3] 补全caravan字段", migrateV3.hasCaravan && migrateV3.caravanHasTimer && migrateV3.caravanHasOffers, "");
 
 // 报告
 console.log("\n═══════════ 深度测试报告 (覆盖盲区+bug验证) ═══════════");
