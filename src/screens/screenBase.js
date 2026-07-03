@@ -188,7 +188,7 @@ function drawExploreEntry(ctx, ui, state, x, y, w, h) {
   // 统计:已解锁地图数 + 全局发现数
   const unlocked = Object.values(state.maps.list).filter((m) => m.unlocked).length;
   const totalMaps = Object.keys(state.maps.list).length;
-  const { totalDiscovered } = _regions(state);
+  const totalDiscovered = _regions(state).totalDiscovered(state); // totalDiscovered 是函数,需调用
   text(ctx, `已解锁 ${unlocked}/${totalMaps} 地图 · 探索 ${totalDiscovered} 地点`, x + 56, y + 30, {
     size: T.fontXs,
     color: T.textDim,
