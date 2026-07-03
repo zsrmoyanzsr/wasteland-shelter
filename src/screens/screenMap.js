@@ -28,6 +28,7 @@ function tileIconIndex(gx, gy, mapId) {
 import { contentRect } from "./screenHud.js";
 import { getHeroImage } from "../engine/avatarLoader.js";
 import { markExplored } from "../engine/guide.js";
+import { landmarkDef as landmarkDefCached } from "../content/landmarks.js";
 import {
   currentMap,
   mapPixelSize,
@@ -161,6 +162,30 @@ export function drawMapScreen(ctx, state, ui, W, H) {
     ctx.setLineDash([]);
     icon(ctx, "🌀", es.x, es.y, 18);
     text(ctx, "传送点", es.x, es.y + 22, { size: T.fontXs, color: T.primary, align: "center", weight: "700" });
+  }
+
+  // 地标渲染(已发现的显示图标,已领取的显示✓)
+  if (map.landmarks) {
+    for (const lm of map.landmarks) {
+      const cellIdx = lm.gy * map.gridW + lm.gx;
+      const cellState = map.cells[cellIdx];
+      if (cellState === CELL.HIDDEN) continue; // 迷雾中不显示
+      const lw = gridToWorld(lm.gx, lm.gy);
+      const ls = w2s(lw.x, lw.y);
+      if (!inView(ls, cr, 40)) continue;
+      const lmDef = landmarkDefCached(lm.type);
+      if (!lmDef) continue;
+      // 已领取: 灰色✓; 已发现未领取: 彩色图标; 未发现(刚揭示): 隐藏(等踩到)
+      if (lm.claimed) {
+        ctx.globalAlpha = 0.4;
+        icon(ctx, "✓", ls.x, ls.y, 18);
+        ctx.globalAlpha = 1;
+      } else if (cellState === CELL.VISITED) {
+        // 已踏足但未claim(不该发生,防御性)→ 显示问号
+        icon(ctx, lmDef.icon, ls.x, ls.y, 16);
+      }
+      // REVEALED 状态不显示(等玩家踩上去才触发)
+    }
   }
 
   const tp = w2s(state.player.tx, state.player.ty);

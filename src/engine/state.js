@@ -168,8 +168,11 @@ export function createNewState() {
 
     // 威胁事件: 辐射风暴/瘟疫/入侵/寒潮(消耗道具应对,不致死)
     threat: {
-      timer: 1440, // 首次触发倒计时(12天);触发后重置12-18天
+      timer: 1440,
     },
+
+    // 已解锁的特殊建筑蓝图(通过地图地标发现)
+    blueprints: [],
   };
   // 主角初始位置 = home 地图入口格中心
   const homeMap = currentMap(st);
@@ -257,6 +260,7 @@ export const DEFAULTS = {
   equipment: { equipped: {}, blueprints: [], storage: [] },
   prestige: { generation: 1, relics: 0, bonusMult: 0, unlockedEndings: [] },
   threat: { timer: 1440 },
+  blueprints: [],
   // 单个幸存者的可缺失字段默认值
   survivor: {
     perks: [],

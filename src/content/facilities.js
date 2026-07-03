@@ -137,9 +137,67 @@ export const FACILITY_TYPES = {
     cost: (lvl) => ({ scrap: 20 + lvl * 12, parts: 6 + lvl * 4 }),
     perk: "engineer",
   },
+  // ── 蓝图解锁的特殊建筑(只能通过地图地标发现图纸) ──
+  hydro_gen: {
+    type: "hydro_gen",
+    name: "水力发电机",
+    icon: "💧",
+    desc: "利用地下水流发电,产出远超普通发电机,且不消耗废铁。需在水道发现图纸。",
+    category: "production",
+    catLabel: "特殊",
+    maxLevel: 5,
+    base: { produces: { power: 1.0 }, consumes: {}, jobs: 1 },
+    growth: 1.65,
+    cost: (lvl) => ({ scrap: 25 + lvl * 12, parts: 12 + lvl * 6 }),
+    perk: "engineer",
+    blueprintOnly: true,
+  },
+  bio_lab: {
+    type: "bio_lab",
+    name: "生物实验室",
+    icon: "🧫",
+    desc: "高级医疗研究设施,药品产出高,且派出的队伍治疗效率+50%。需在实验室发现图纸。",
+    category: "special",
+    catLabel: "特殊",
+    maxLevel: 5,
+    base: { produces: { meds: 0.3 }, consumes: { power: 0.1, water: 0.1 }, jobs: 2 },
+    growth: 1.65,
+    cost: (lvl) => ({ scrap: 30 + lvl * 12, parts: 15 + lvl * 8 }),
+    perk: "doctor",
+    blueprintOnly: true,
+  },
+  antimatter: {
+    type: "antimatter",
+    name: "反物质反应堆",
+    icon: "⚛️",
+    desc: "终极能源设施,产出巨量电力。需在地堡/军事禁区发现图纸。",
+    category: "production",
+    catLabel: "特殊",
+    maxLevel: 5,
+    base: { produces: { power: 2.0 }, consumes: { parts: 0.05 }, jobs: 1 },
+    growth: 1.7,
+    cost: (lvl) => ({ scrap: 60 + lvl * 20, parts: 30 + lvl * 12 }),
+    perk: "engineer",
+    blueprintOnly: true,
+  },
+  auto_farm: {
+    type: "auto_farm",
+    name: "自动化农场",
+    icon: "🤖",
+    desc: "全自动灌溉收割,无人值守也不降效,食物产出极高。需在避难所/营地发现图纸。",
+    category: "survival",
+    catLabel: "特殊",
+    maxLevel: 5,
+    base: { produces: { food: 0.8 }, consumes: { water: 0.2, power: 0.1 }, jobs: 1 },
+    growth: 1.65,
+    cost: (lvl) => ({ scrap: 35 + lvl * 15, parts: 18 + lvl * 8 }),
+    perk: "farmer",
+    blueprintOnly: true,
+  },
 };
 
-// 计算设施某等级的产出/消耗/工作位
+// 获取蓝图锁定的建筑id列表
+export const BLUEPRINT_BUILDINGS = ["hydro_gen", "bio_lab", "antimatter", "auto_farm"];
 export function facilityStats(type, level) {
   const def = FACILITY_TYPES[type];
   if (!def) return null;
@@ -171,13 +229,20 @@ export function createInitialFacilities() {
 }
 
 // 可建造的设施类型列表(按分类)
-export function buildableTypes() {
-  return Object.values(FACILITY_TYPES).map((f) => ({
-    type: f.type,
-    name: f.name,
-    icon: f.icon,
-    desc: f.desc,
-    category: f.category,
-    catLabel: f.catLabel,
-  }));
+export function buildableTypes(state) {
+  const blueprints = state?.blueprints || [];
+  return Object.values(FACILITY_TYPES)
+    .filter((f) => {
+      // 蓝图锁定的建筑只有解锁后才显示
+      if (f.blueprintOnly && !blueprints.includes(f.type)) return false;
+      return true;
+    })
+    .map((f) => ({
+      type: f.type,
+      name: f.name,
+      icon: f.icon,
+      desc: f.desc,
+      category: f.category,
+      catLabel: f.catLabel,
+    }));
 }

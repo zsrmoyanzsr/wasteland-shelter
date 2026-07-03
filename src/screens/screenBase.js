@@ -428,7 +428,7 @@ function drawBuildPanel(ctx, ui, state, x, y, w, h) {
   });
 
   // 网格卡片(自动换行,容纳所有设施)
-  const types = buildableTypes();
+  const types = buildableTypes(state);
   const cardW = 92;
   const cardH = 96;
   const gap = 8;

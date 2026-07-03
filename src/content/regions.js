@@ -1,6 +1,8 @@
 // 多地图系统: 每张地图是 N×M 网格,带 POI(可派遣点)、迷雾、解锁条件
 // 主角在格子上移动,踏入未探索格触发探索事件(见 exploreEvents.js)
 
+import { injectLandmarks } from "./landmarks.js";
+
 // 每格状态
 export const CELL = {
   HIDDEN: 0, // 未探索(迷雾)
@@ -282,6 +284,8 @@ export function createMaps() {
     // 揭示入口周围
     revealCellAndNeighbors(rt, def.entry.gx, def.entry.gy);
   }
+  // 注入地图地标
+  injectLandmarks(list);
   return { current: "home", list };
 }
 

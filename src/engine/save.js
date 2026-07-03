@@ -276,6 +276,16 @@ function mergeDefaults(s) {
   if (!s.threat) s.threat = { timer: 1440 };
   if (s.threat.timer == null) s.threat.timer = 1440;
 
+  // blueprints(已解锁的特殊建筑图纸)
+  if (!Array.isArray(s.blueprints)) s.blueprints = [];
+
+  // 地标(landmarks): 给每张地图补landmarks字段
+  if (s.maps?.list) {
+    for (const id in s.maps.list) {
+      if (!Array.isArray(s.maps.list[id].landmarks)) s.maps.list[id].landmarks = [];
+    }
+  }
+
   // maps: 重建若缺失,补全缺失地图
   if (!s.maps) s.maps = createMaps();
   if (!s.maps.list) s.maps.list = {};
