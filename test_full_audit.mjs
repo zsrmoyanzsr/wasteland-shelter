@@ -102,8 +102,9 @@ const explore = await page.evaluate(async () => {
   // 3a. revealCellAndNeighbors 揭示相邻
   map.cells.fill(0);
   reg.revealCellAndNeighbors(map, 3, 3);
-  const self = map.cells[3*8+3] === 2; // VISITED
-  const neighbor = map.cells[3*8+4] === 1; // REVEALED
+  const gw = map.gridW;
+  const self = map.cells[3*gw+3] === 2; // VISITED
+  const neighbor = map.cells[3*gw+4] === 1; // REVEALED
   // 3b. 重复踏足不重复
   const r1 = reg.revealCellAndNeighbors(map, 3, 3);
   const r2 = reg.revealCellAndNeighbors(map, 3, 3);

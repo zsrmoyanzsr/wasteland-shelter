@@ -16,7 +16,7 @@ export function facilityProduction(state, fac) {
 
   // 居民加成: 每个分配的居民 +30% 产出; 有对应特长 +50%; 技能值额外加成
   // 技能 → 设施映射: farm→farm技能, workshop→craft, well→farm(种植水利), generator→craft, medbay→medical
-  const skillMap = { farm: "farm", workshop: "craft", well: "farm", generator: "craft", medbay: "medical" };
+  const skillMap = { farm: "farm", greenhouse: "farm", workshop: "craft", armory: "craft", well: "farm", generator: "craft", medbay: "medical", watchtower: "combat", scrapyard: "craft" };
   const facilitySkill = skillMap[fac.type];
   let mult = 0; // 加成倍率(0=无人工作,产能打折)
   if (assigned.length > 0) {

@@ -79,12 +79,11 @@ export function updateExplore(state) {
     updateUnlocks(state); // 发现可能解锁新地图
   }
 
-  // 首次踏足该格 → 按"分组分布"规则决定是否触发(~33%密度,每3x3组至少3个事件格)
+  // 首次踏足该格 → 按"分组分布"规则决定是否触发(~15%密度,大地图不烦)
   if (result.newlyVisited && !state.modal && !state._exploreCooldown) {
-    // 用格子坐标的确定性hash决定是否有事件(每3x3块里约3-4个格有事件)
-    // hash(gx,gy,mapId) → 0..1,< 0.33 则触发(约33%)
+    // hash(gx,gy,mapId) → 0..1,< 0.15 则触发(约15%,大地图约7格触发1次)
     const eventHash = cellEventHash(gx, gy, state.maps.current);
-    if (eventHash < 0.33) {
+    if (eventHash < 0.15) {
       // 侦察兵(scavenger)在场 → 提升好事件概率
       const hasScout = state.survivors.some((s) => s.busy !== "dead" && s.perks && s.perks.includes("scavenger"));
       const hasSocial = state.survivors.some((s) => s.busy !== "dead" && (s.skills.social || 0) >= 2);
