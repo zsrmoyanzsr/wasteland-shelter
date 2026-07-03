@@ -77,6 +77,19 @@ export const POI_ITEM_DROPS = {
     { id: "bandage", chance: 0.25, amt: [1, 1] },
     { id: "blueprint", chance: 0.05, amt: [1, 1] },
   ],
+  supply: [
+    { id: "screw", chance: 0.4, amt: [1, 3] },
+    { id: "bandage", chance: 0.35, amt: [1, 2] },
+    { id: "cloth", chance: 0.3, amt: [1, 3] },
+    { id: "stimpack", chance: 0.15, amt: [1, 1] },
+  ],
+  lab: [
+    { id: "chem", chance: 0.45, amt: [1, 3] },
+    { id: "circuit", chance: 0.35, amt: [1, 2] },
+    { id: "antibiotic", chance: 0.25, amt: [1, 1] },
+    { id: "blueprint", chance: 0.1, amt: [1, 1] },
+    { id: "radaway", chance: 0.2, amt: [1, 1] },
+  ],
 };
 
 // 随机生成派遣物品掉落

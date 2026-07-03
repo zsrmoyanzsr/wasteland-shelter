@@ -42,7 +42,7 @@ T("幸存者有6技能+特长", init.survAssigned.every(s => s.skills === 6 && s
 T("人口上限=2+lv*2=4", init.popCap === 4, "popCap=" + init.popCap);
 T("主角有health=100", init.playerHealth === 100, "hp=" + init.playerHealth);
 T("初始解锁2张地图(home/town)", init.mapsUnlocked === 2, "unlocked=" + init.mapsUnlocked);
-T("7任务+10成就", init.taskCount === 7 && init.achCount === 10, `tasks=${init.taskCount} ach=${init.achCount}`);
+T("7任务+13成就", init.taskCount === 7 && init.achCount === 13, `tasks=${init.taskCount} ach=${init.achCount}`);
 
 // ── 角度2: 经济逻辑(产出>消耗,不饿死) ──
 const econ = await page.evaluate(async () => {

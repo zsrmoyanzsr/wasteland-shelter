@@ -384,6 +384,7 @@ import { drawRecruitModal as _drawRecruit } from "./screens/screenTasks.js";
 import { drawExploreEventModal as _drawExploreEvent } from "./screens/screenExploreEvent.js";
 import { drawTradeModal as _drawTrade } from "./screens/screenTrade.js";
 import { drawTechTreeModal as _drawTechTree, drawInventoryModal as _drawInventory, drawArtifactSelectModal as _drawArtifactSelect, drawThreatModal as _drawThreat } from "./screens/screenTech.js";
+import { drawEndingModal as _drawEnding } from "./screens/screenEnding.js";
 import { updateThreat } from "./engine/threatEngine.js";
 
 function drawActiveModal(ctx, state, ui, W, H) {
@@ -395,6 +396,7 @@ function drawActiveModal(ctx, state, ui, W, H) {
   if (m.type === "inventory") { _drawInventory(ctx, ui, state, W, H); return; }
   if (m.type === "artifactSelect") { _drawArtifactSelect(ctx, ui, state, W, H); return; }
   if (m.type === "threat") { _drawThreat(ctx, ui, state, W, H); return; }
+  if (m.type === "ending") { _drawEnding(ctx, ui, state, W, H); return; }
   switch (state.screen) {
     case SCREEN.BASE:
       if (m.type === "upgradeFacility") _drawUpgrade(ctx, ui, state, W, H);

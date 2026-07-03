@@ -127,5 +127,11 @@ export function grantArtifact(state, tier, rng) {
   const def = ARTIFACTS[chosen];
   const tDef = ARTIFACT_TIERS[tier];
   addLog(state, `✨ 发现神器! ${def.icon} ${def.name} [${tDef.name}] ${def.desc}`, tDef.color);
+  // 方舟之钥触发真相结局
+  if (def.stat?.unlockEnding && !state.prestige.unlockedEndings.includes(def.stat.unlockEnding)) {
+    state.prestige.unlockedEndings.push(def.stat.unlockEnding);
+    state.modal = { type: "ending", endingId: def.stat.unlockEnding };
+    addLog(state, `🏆 达成隐藏结局! ${def.stat.unlockEnding}`, "#f0a93b");
+  }
   return chosen;
 }

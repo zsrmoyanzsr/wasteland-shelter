@@ -52,6 +52,15 @@ export function drawStartScreen(ctx, state, ui, W, H) {
     weight: "600",
   });
 
+  // 世代传承: 达成过结局的玩家显示
+  const gen = state.prestige?.generation || 1;
+  const endings = state.prestige?.unlockedEndings?.length || 0;
+  if (gen > 1 || endings > 0) {
+    text(ctx, `第 ${gen} 代所长 · 已达成 ${endings}/4 结局 · 永久加成 +${Math.round((state.prestige?.bonusMult || 0) * 100)}%`, W / 2, py + 152, {
+      size: T.fontXs, color: T.accent, align: "center", weight: "600",
+    });
+  }
+
   // 简介框
   const introY = py + 168;
   fillRoundRect(ctx, px + 24, introY, pw - 48, 76, T.radiusSm, T.bg, T.panelLine, 1);

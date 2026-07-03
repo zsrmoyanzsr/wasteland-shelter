@@ -187,7 +187,7 @@ const migrateTest = await page.evaluate(async () => {
     hasSkills: loaded?.survivors?.[0]?.skills != null && Object.keys(loaded.survivors[0].skills).length === 6,
     mapRemoved: loaded?.map === undefined,
     tasksRebuilt: Array.isArray(loaded?.tasks) && loaded.tasks.length === 7,
-    achievementsRebuilt: Array.isArray(loaded?.achievements) && loaded.achievements.length === 10,
+    achievementsRebuilt: Array.isArray(loaded?.achievements) && loaded.achievements.length === 13,
     cellsIsUint8: loaded?.maps?.list?.home?.cells instanceof Uint8Array,
   };
 });
@@ -197,7 +197,7 @@ T("存档迁移: 老map→新maps结构", migrateTest.hasMaps && migrateTest.map
 T("存档迁移: player补全health", migrateTest.hasHealth, "");
 T("存档迁移: survivor补全6技能", migrateTest.hasSkills, "");
 // Bug6已修复: 空数组 tasks/achievements 现在也会重建
-T("存档迁移: 空数组tasks/achievements重建", migrateTest.tasksRebuilt && migrateTest.achievementsRebuilt, "tasks7+ach10");
+T("存档迁移: 空数组tasks/achievements重建", migrateTest.tasksRebuilt && migrateTest.achievementsRebuilt, "tasks7+ach13");
 T("存档迁移: cells还原为Uint8Array", migrateTest.cellsIsUint8, "");
 
 // ═══════════ 盲区10: 损坏存档从备份恢复 ═══════════

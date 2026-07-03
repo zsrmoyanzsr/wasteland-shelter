@@ -83,8 +83,11 @@ export function tickEconomy(state, dt) {
   delta.food -= foodConsumePerSec;
   delta.water -= waterConsumePerSec;
 
+  // 世代传承加成: 转生过的玩家有永久产出加成(bonusMult)
+  const prestigeMult = 1 + (state.prestige?.bonusMult || 0);
   // 应用到资源(带容量上限,容量随基地等级提升)
   for (const k in delta) {
+    if (delta[k] > 0) delta[k] *= prestigeMult; // 正产出享受加成,消耗不变
     const before = state.res[k];
     state.res[k] += delta[k] * dt;
     const cap = getResCap(state, k);

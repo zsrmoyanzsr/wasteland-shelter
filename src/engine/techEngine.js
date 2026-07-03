@@ -37,5 +37,11 @@ export function doResearch(state, branch) {
   state.tech[branch] = next.level;
   const tree = TECH_TREE[branch];
   addLog(state, `🔬 科技突破: ${tree.name} · ${next.name}! ${next.effect}`, "#e0588e");
+  // 结局检查: 升满级时触发对应结局
+  if (next.unlocksEnding && !state.prestige.unlockedEndings.includes(next.unlocksEnding)) {
+    state.prestige.unlockedEndings.push(next.unlocksEnding);
+    state.modal = { type: "ending", endingId: next.unlocksEnding };
+    addLog(state, `🏆 达成结局! ${next.unlocksEnding}`, "#f0a93b");
+  }
   return true;
 }

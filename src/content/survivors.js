@@ -8,6 +8,8 @@ export const PROFESSIONS = [
   { id: "soldier", name: "士兵", icon: "🪖", perks: ["guardian"], baseSkill: "combat", stat: { combat: 3 } },
   { id: "farmer", name: "农夫", icon: "🌱", perks: ["farmer"], baseSkill: "farm", stat: { farm: 3 } },
   { id: "trader", name: "商人", icon: "💰", perks: ["negotiator"], baseSkill: "social", stat: { social: 3 } },
+  { id: "scientist", name: "科学家", icon: "🧪", perks: ["researcher"], baseSkill: "medical", stat: { medical: 2, craft: 1 } },
+  { id: "hunter", name: "猎人", icon: "🏹", perks: ["tracker"], baseSkill: "combat", stat: { combat: 2, scavenge: 1 } },
 ];
 
 export const PERKS = {
@@ -17,13 +19,17 @@ export const PERKS = {
   scavenger: { id: "scavenger", name: "搜刮大师", icon: "🎒", desc: "探索资源收益+25%" },
   negotiator: { id: "negotiator", name: "谈判专家", icon: "🤝", desc: "事件好结果概率+" },
   guardian: { id: "guardian", name: "守护者", icon: "🛡️", desc: "战斗减伤,防御加成" },
+  researcher: { id: "researcher", name: "研究员", icon: "🔬", desc: "科技研发成本-20%" },
+  tracker: { id: "tracker", name: "追踪者", icon: "🐾", desc: "派遣物品掉落+30%" },
 };
 
 const FIRST_NAMES = [
   "老张","阿强","林夏","苏晚","陈默","杰克","艾米","凯尔","莫言","雷诺",
   "安娜","维克","米拉","周游","唐尼","索拉","卡尔","薇拉","洛奇","南希",
+  "星河","叶蓝","楚寒","凌霜","墨白","伊娃","诺亚","黛安","霍克","尤里",
+  "夏栀","陆远","温蒂","雷泽","黛拉",
 ];
-const NICKNAMES = ["铁手","夜鹰","灰狼","残月","独狼","火种","锈牙","沉默","拾荒者","老兵"];
+const NICKNAMES = ["铁手","夜鹰","灰狼","残月","独狼","火种","锈牙","沉默","拾荒者","老兵","幽灵","疾风","猎隼","铁壁","星尘","暗影","荆棘","苍鹰","寒冰","破晓"];
 
 function pick(arr, rng) {
   return arr[Math.floor(rng() * arr.length)];
@@ -94,6 +100,7 @@ export function xpForLevel(level) {
 const PROF_MAIN_SKILL = {
   doctor: "medical", engineer: "craft", scout: "scavenge",
   soldier: "combat", farmer: "farm", trader: "social",
+  scientist: "medical", hunter: "combat",
 };
 export function levelUpSurvivor(s) {
   s.level += 1;

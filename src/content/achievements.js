@@ -61,10 +61,10 @@ export const ACHIEVEMENT_DEFS = [
   {
     id: "world_explorer",
     name: "废土行者",
-    desc: "解锁全部 5 张地图",
+    desc: "解锁全部 8 张地图",
     icon: "🌍",
-    check: (st) => Object.values(st.maps.list).filter((m) => m.unlocked).length >= 5,
-    progress: (st) => Object.values(st.maps.list).filter((m) => m.unlocked).length / 5,
+    check: (st) => Object.values(st.maps.list).filter((m) => m.unlocked).length >= 8,
+    progress: (st) => Object.values(st.maps.list).filter((m) => m.unlocked).length / 8,
     reward: { parts: 25, scrap: 30 },
   },
   {
@@ -94,6 +94,41 @@ export const ACHIEVEMENT_DEFS = [
     progress: (st) => Math.min(st.res.scrap / 100, st.res.parts / 50),
     reward: { power: 15, meds: 10 },
   },
+  {
+    id: "artifact_collector",
+    name: "神器收藏家",
+    desc: "收集 5 件神器",
+    icon: "✨",
+    check: (st) => {
+      const owned = (st.equipment?.storage || []).length +
+        Object.values(st.equipment?.equipped || {}).reduce((s, e) => s + (e.slot0 ? 1 : 0) + (e.slot1 ? 1 : 0), 0);
+      return owned >= 5;
+    },
+    progress: (st) => {
+      const owned = (st.equipment?.storage || []).length +
+        Object.values(st.equipment?.equipped || {}).reduce((s, e) => s + (e.slot0 ? 1 : 0) + (e.slot1 ? 1 : 0), 0);
+      return Math.min(1, owned / 5);
+    },
+    reward: { scrap: 30, parts: 20 },
+  },
+  {
+    id: "cartographer3",
+    name: "废土丈量者",
+    desc: "探索全部 8 张地图",
+    icon: "🗺️",
+    check: (st) => Object.values(st.maps.list).filter((m) => m.unlocked).length >= 8,
+    progress: (st) => Object.values(st.maps.list).filter((m) => m.unlocked).length / 8,
+    reward: { parts: 25, scrap: 30 },
+  },
+  {
+    id: "tech_master",
+    name: "全能所长",
+    desc: "解锁全部 3 条科技线满级",
+    icon: "🔬",
+    check: (st) => st.tech?.defense >= 5 && st.tech?.production >= 5 && st.tech?.bio >= 5,
+    progress: (st) => ((st.tech?.defense || 0) + (st.tech?.production || 0) + (st.tech?.bio || 0)) / 15,
+    reward: { scrap: 50, parts: 40, power: 30 },
+  },
 ];
 
 export function createInitialAchievements() {
@@ -111,7 +146,7 @@ export function rebuildProgress(state) {
   // 设施数 (0-15%)
   p += Math.min(1, state.base.facilities.length / 8) * 0.15;
   // 探索发现 (0-20%)
-  p += Math.min(1, totalDiscovered(state) / 15) * 0.2;
+  p += Math.min(1, totalDiscovered(state) / 24) * 0.2;
   // 派遣次数 (0-10%)
   p += Math.min(1, state.stats.expeditionsDone / 10) * 0.1;
   // 成就完成 (0-10%)
