@@ -4,7 +4,7 @@
 > 从零接手也能在 30 分钟内跑通游戏、1 小时内动手改第一个功能。
 >
 > 文档与代码同步更新规则：**每次改了架构/数据结构/关键逻辑，必须同步更新本文对应章节。**
-> 最后更新：v2.5.1（4-agent playtest 修复7个bug：循环容错/poiInfo容错/双重扣减/袭击/stats累计等）。
+> 最后更新：v4.2（地标系统+蓝图建筑+背包消耗品+解雇+结局系统+科技树+神器+威胁+虚弱debuff）。
 
 ---
 
@@ -80,45 +80,62 @@ node test_edge.mjs     # 14 项边界测试（负数/容量/扣血/体力/人口
 ├── vite.config.js          # 端口 5180，strictPort
 ├── package.json
 ├── src/
-│   ├── main.js             # 入口：canvas初始化/游戏循环/屏幕路由/测试钩子 (455行)
+│   ├── main.js             # 入口：canvas初始化/游戏循环/屏幕路由/模态路由/测试钩子
 │   ├── engine/             # 引擎层（纯逻辑，无渲染）
-│   │   ├── state.js        # 中心 state 对象 + DEFAULTS 模板 (219行)
-│   │   ├── save.js         # 版本化存档/迁移/备份/自检 (336行)
-│   │   ├── economy.js      # 经济 tick/产出消耗/医疗/离线结算 (175行)
-│   │   ├── worldUpdate.js  # 主角移动/网格探索/事件触发 (115行)
-│   │   └── avatarLoader.js # 立绘加载(内联base64+外部覆盖) (95行)
+│   │   ├── state.js        # 中心 state + DEFAULTS + getResCap (版本v6)
+│   │   ├── save.js         # 版本化存档(迁移v1→v6/默认合并/备份恢复)
+│   │   ├── economy.js      # 经济tick/虚弱debuff/离线结算/转生加成
+│   │   ├── worldUpdate.js  # 主角移动/网格探索/事件触发/地标发现
+│   │   ├── caravan.js      # 流浪商队(到访/方案/交易/限时)
+│   │   ├── inventory.js    # 物品背包(增删查/消耗品使用)
+│   │   ├── techEngine.js   # 科技研发(检查/扣除/结局触发)
+│   │   ├── artifactEngine.js # 神器(掉落/唯一性/槽位/穿戴)
+│   │   ├── threatEngine.js # 威胁(触发/道具应对/不致死惩罚)
+│   │   ├── cloudSave.js    # 存档码系统(gzip压缩/导入导出)
+│   │   ├── guide.js        # 新手引导(里程碑/横幅提示)
+│   │   └── avatarLoader.js # 立绘加载(内联base64+外部覆盖)
 │   ├── content/            # 内容层（数据定义，可扩展）
-│   │   ├── regions.js      # 5张地图/POI/网格/解锁/传送 (376行)
-│   │   ├── exploreEvents.js# 探索事件池(82个:好40/坏30/中立12) (705行)
-│   │   ├── events.js       # 派遣事件池(196行)
-│   │   ├── survivors.js    # 职业/特长/姓名/生成器 (126行)
-│   │   ├── facilities.js   # 6种设施定义/产出/成本 (132行)
-│   │   ├── tasks.js        # 7个任务定义 (73行)
-│   │   ├── achievements.js # 10个成就/重建进度 (139行)
-│   │   └── avatars_inlined.js # 12立绘+主角 base64 内联 (~700KB)
+│   │   ├── regions.js      # 8张地图/7种POI/网格/解锁/传送/地标注入
+│   │   ├── landmarks.js    # 8种特殊地标定义+每地图配置
+│   │   ├── artifacts.js    # 18种神器(SABC级,唯一)
+│   │   ├── tech.js         # 科技树(3线×5级+结局解锁)
+│   │   ├── items.js        # 17种物品+派遣掉落表
+│   │   ├── threats.js      # 4种威胁定义
+│   │   ├── endings.js      # 4种结局定义+触发检查
+│   │   ├── facilities.js   # 14种设施(10基础+4蓝图解锁)
+│   │   ├── survivors.js    # 8职业/8特长/名字池/升级
+│   │   ├── exploreEvents.js# 82个探索事件(好40/坏30/中立12)
+│   │   ├── events.js       # 5个派遣事件
+│   │   ├── tasks.js        # 7个任务定义
+│   │   ├── achievements.js # 14个成就+重建进度
+│   │   └── avatars_inlined.js # 12张立绘base64(~700KB)
 │   ├── screens/            # 屏幕层（每屏一个绘制函数 + 模态）
-│   │   ├── screenHud.js    # 顶栏/侧栏/底导航/布局 contentRect (201行)
-│   │   ├── screenBase.js   # 基地屏:设施网格/建造升级/探索入口 (615行)
-│   │   ├── screenMap.js    # 地图屏:网格/迷雾/主角/AI装饰图标 (352行)
-│   │   ├── screenRoster.js # 居民屏:列表/详情/分配 (359行)
-│   │   ├── screenDispatch.js# 派遣屏:组队/倒计时/事件/结果 (629行)
-│   │   ├── screenTasks.js  # 任务屏:任务/成就/招募/重建进度 (335行)
-│   │   ├── screenExploreEvent.js # 探索事件模态 (133行)
-│   │   └── screenStart.js  # 开始屏 (98行)
-│   └── ui/                 # UI 层（绘制原语/主题/头像）
-│       ├── ui.js           # fillRoundRect/text/button/progressBar 等 (260行)
-│       ├── theme.js        # 配色/字号/资源元数据 (65行)
-│       ├── input.js        # 鼠标/触摸/键盘 → pointer状态 (124行)
-│       └── avatar.js       # 头像绘制辅助 (273行)
+│   │   ├── screenStart.js  # 开始屏+存档码导出导入+世代显示
+│   │   ├── screenHud.js    # 资源条(含背包入口)+导航
+│   │   ├── screenBase.js   # 基地屏+建造+升级+研究中心入口
+│   │   ├── screenMap.js    # 地图屏+网格+迷雾+地标渲染
+│   │   ├── screenRoster.js # 居民屏+详情+分配+神器+解雇
+│   │   ├── screenDispatch.js# 派遣屏+组队+结算+物品/神器掉落
+│   │   ├── screenTasks.js  # 任务屏+成就+无线电招募
+│   │   ├── screenExploreEvent.js # 探索事件模态
+│   │   ├── screenTrade.js  # 商队交易模态
+│   │   ├── screenTech.js   # 科技树+背包+神器选择+威胁+消耗品 模态
+│   │   └── screenEnding.js # 结局画面
+│   └── ui/                 # UI 层
+│       ├── ui.js input.js theme.js avatar.js guideBanner.js
 ├── public/
-│   ├── avatars/            # 外部立绘(可选,覆盖内联): girl_0..11.png + hero.png + manifest.json
-│   └── img/tiles/          # 5个AI地图装饰图标: ruins/tree/rock/crater/cache .png (128px)
+│   ├── avatars/            # 外部立绘(可选,覆盖内联)
+│   └── img/tiles/          # AI地图装饰图标
 ├── test_logic.mjs          # 26项逻辑测试
 ├── test_edge.mjs           # 14项边界测试
-├── shot_map.mjs            # 地图截图验证脚本
+├── test_deep.mjs           # 65项深度测试
+├── test_ui_e2e.mjs         # 27项UI端到端测试
+├── test_balance.mjs        # 长测(100-500天)
+├── test_full_audit.mjs     # 32项8系统全量实测
+├── test_mega.mjs           # 26项16系统完整检索
 ├── DEVELOPMENT.md          # ← 本文档（架构/扩展/踩坑）
-├── README.md               # 项目总览（给所有人）
-├── progress.md             # 完整变更历史 + bug修复记录 + 测试结果
+├── README.md               # 项目总览
+├── progress.md             # 完整变更历史
 └── DEPLOY.md               # 部署指南(Netlify/Vercel/GitHub Pages)
 ```
 
@@ -501,9 +518,31 @@ newFac: {
 `content/tasks.js` 的 `TASK_DEFS` 加一个。任务类型：facility_level / population / discover / expeditions / facility_type / resource。`updateTasks`（screenTasks.js）每帧判定。
 
 ### 6.7 加新 AI 图标/立绘
-- **地图装饰图标**：放 `public/img/tiles/xxx.png`（128×128，废土风格），在 screenMap.js 的 `TILE_ICONS` 数组加名字。`tileIconIndex` 决定每格显示哪个（hash<0.6 才显示，60%格子有装饰）。
+- **地图装饰图标**：放 `public/img/tiles/xxx.png`（128×128，废土风格），在 screenMap.js 的 `TILE_ICONS` 数组加名字。
 - **幸存者立绘**：放 `public/avatars/girl_N.png`，更新 `public/avatars/manifest.json`。内联版在 `src/content/avatars_inlined.js`（base64，离线零依赖）。`getAvatarImage(id,name)` 按 id+name 哈希确定性分配。
-- 生成图用 pollinations.ai FLUX（免费无 key）：`https://image.pollinations.ai/prompt/<URL编码的prompt>?width=128&height=128&nologo=true`
+- 生成图用 pollinations.ai FLUX（免费无 key）
+
+### 6.8 加新神器
+`content/artifacts.js` 的 `ARTIFACTS` 加一个：
+```js
+art_new: { id:"art_new", tier:"A", name:"新神器", icon:"🔮", desc:"描述", slot:"any", stat:{combat:10}, minLevel:5 }
+```
+自动纳入掉落池（`rollArtifactDrop` 按 tier 加权随机），唯一性自动检查。
+
+### 6.9 加新科技
+`content/tech.js` 的 `TECH_TREE[branch].levels` 加一级（每个 branch 最多5级）。加 `unlocksEnding` 可触发结局。
+
+### 6.10 加新地图地标
+`content/landmarks.js` 的 `MAP_LANDMARKS[mapId]` 加一个 `{type, gx, gy}`。8种地标类型在 `LANDMARK_TYPES` 定义，新增类型需在 `worldUpdate.js` 的 `triggerLandmark` 加奖励逻辑。
+
+### 6.11 加新蓝图解锁建筑
+1. `facilities.js` 的 `FACILITY_TYPES` 加一个，设 `blueprintOnly: true`
+2. 加入 `BLUEPRINT_BUILDINGS` 数组
+3. `landmarks.js` 的 `BLUEPRINT_REWARDS[mapId]` 指向它
+4. `buildableTypes(state)` 自动过滤（只有 `state.blueprints` 包含才显示）
+
+### 6.12 加新威胁
+`content/threats.js` 的 `THREATS` 加一个：counterItem(应对道具)/penalty(不应对惩罚,floor=1不致死)。`threatEngine` 自动纳入随机池。
 
 ---
 
@@ -620,6 +659,14 @@ node shot_map.mjs      # 地图截图(验证图标渲染,人工看图)
 | **v2.4** | **流浪商队交易系统: 每6-9天稀有到访,智能生成3个高价值方案(用富余换稀缺),解决后期爆仓+增加决策乐趣** | **progress.md + 本文档** |
 | **v2.5** | **玩法转向: 前期资源精简(meds/power初始0)+ 自产削弱(前期靠派遣)+ 派遣属性加成(组队策略)+ 远POI高时间高回报** | **progress.md + 本文档** |
 | **v2.5.1** | **4-agent playtest(各玩600+天)修复7bug: 主循环try/catch防冻结/poiInfo容错/派遣负reward双重扣减/袭击后期失效/stats累计/容量口径统一/progress clamp** | **progress.md + 本文档** |
+| **v2.6** | **触摸拖拽滚动(手机终于能滑列表)+宽屏内容移出侧栏+存档码跨设备转移系统** | **progress.md** |
+| **v3.0** | **物品系统(17种)+科技树(3线×5级)+存档迁移v6** | **progress.md** |
+| **v3.2** | **神器系统(18种SABC级,存档唯一,属性定槽)替换通用装备** | **progress.md** |
+| **v3.3** | **威胁系统(辐射风暴/瘟疫/入侵/寒潮,消耗道具应对不致死)** | **progress.md** |
+| **v3.4** | **虚弱debuff(三档:轻伤-20%/-15%,重伤-40%/禁派遣)** | **progress.md** |
+| **v4.0** | **内容大扩展:结局系统(4种)+3新地图+2新职业+4新成就+世代传承** | **progress.md** |
+| **v4.1** | **地图放大50%(8张1358格)+事件密度33%→20%+3新建筑** | **progress.md** |
+| **v4.2** | **地图特殊地标(8种25个)+蓝图解锁建筑(4种)+背包消耗品使用+解雇幸存者** | **progress.md** |
 
 ## 附录 B：关键常量速查
 
