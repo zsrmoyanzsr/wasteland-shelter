@@ -106,12 +106,14 @@ function drawSurvivorCard(ctx, ui, state, s, x, y, w, h) {
   // 状态条: HP
   const barW = w - 80;
   const hpRatio = s.health / s.maxHealth;
-  progressBar(ctx, x + 68, y + 68, barW, 8, hpRatio, {
-    color: hpRatio < 0.3 ? T.danger : T.primary,
-  });
-  text(ctx, `❤️ ${Math.floor(s.health)}  🍖 ${Math.floor(s.hunger)}  😊 ${Math.floor(s.mood)}`, x + 68, y + 78, {
+  // 血量条三档变色: 健康(绿)/轻伤(橙)/重伤(红)
+  const hpColor = s.health < 30 ? T.danger : s.health < 60 ? T.accent : T.primary;
+  progressBar(ctx, x + 68, y + 68, barW, 8, hpRatio, { color: hpColor });
+  // 虚弱标识
+  const weakTag = s.health < 30 ? "🩸重伤" : s.health < 60 ? "💢轻伤" : "";
+  text(ctx, `❤️${Math.floor(s.health)} ${weakTag}  🍖${Math.floor(s.hunger)}  😊${Math.floor(s.mood)}`, x + 68, y + 78, {
     size: T.fontXs,
-    color: T.textDim,
+    color: s.health < 30 ? T.danger : s.health < 60 ? T.accent : T.textDim,
   });
 
   // 状态徽标

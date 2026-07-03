@@ -461,13 +461,19 @@ function settleExpedition(state, e) {
   const scavMult = members.some((m) => m.perks && m.perks.includes("scavenger")) ? 1.25 : 1;
   // ② 远 POI 产出倍率: danger 越高产出越好(1.0/1.3/1.6/1.9)
   const qualityMult = 1 + (info.danger - 1) * 0.3;
+  // ②b 虚弱惩罚: 队员平均health影响产出(轻伤-15%,重伤-40%)
+  // 体现"虚弱的人派出去收获少"的合理性
+  const avgHp = members.length > 0 ? members.reduce((s, m) => s + (m.health || 0), 0) / members.length : 100;
+  let weakMult = 1;
+  if (avgHp < 30) weakMult = 0.6; // 重伤(不应出现因为不能派遣,但防御性)
+  else if (avgHp < 60) weakMult = 0.85; // 轻伤 -15%
 
   // ③ 按资源类型算属性加成(组队策略核心)
   const baseRewards = {};
   for (const k in info.rewards) {
     const [lo, hi] = info.rewards[k];
     let amt = lo + rng() * (hi - lo);
-    amt *= scavMult * qualityMult;
+    amt *= scavMult * qualityMult * weakMult;
     // 该资源对应的技能/特长加成
     const rs = REWARD_SKILL[k];
     if (rs) {

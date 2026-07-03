@@ -33,12 +33,14 @@ export function facilityProduction(state, fac) {
         mult += sv * 0.05;
       }
     }
-    // 重伤(health<30)的居民工作效率减半
+    // 虚弱惩罚(分档): 轻伤(30-60)每人-20%,重伤(<30)每人-40%
+    // 体现"伤员工作效率低",鼓励用医疗室保持健康
     let healthPenalty = 0;
     for (const s of assigned) {
-      if (s.health < 30) healthPenalty += 0.15; // 每个重伤居民 -15%
+      if (s.health < 30) healthPenalty += 0.4; // 重伤 -40%
+      else if (s.health < 60) healthPenalty += 0.2; // 轻伤 -20%
     }
-    mult = Math.max(0.2, mult - healthPenalty);
+    mult = Math.max(0.15, mult - healthPenalty);
     mult = Math.min(mult, 2.5);
   } else {
     mult = 0.35; // 无人值守,低产出(半自动),但不至于完全停摆
