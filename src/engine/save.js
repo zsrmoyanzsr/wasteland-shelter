@@ -272,6 +272,10 @@ function mergeDefaults(s) {
   }
   if (!Array.isArray(s.prestige.unlockedEndings)) s.prestige.unlockedEndings = [];
 
+  // threat(威胁事件)
+  if (!s.threat) s.threat = { timer: 1440 };
+  if (s.threat.timer == null) s.threat.timer = 1440;
+
   // maps: 重建若缺失,补全缺失地图
   if (!s.maps) s.maps = createMaps();
   if (!s.maps.list) s.maps.list = {};

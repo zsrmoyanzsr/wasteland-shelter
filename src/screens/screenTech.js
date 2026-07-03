@@ -282,3 +282,67 @@ export function drawArtifactSelectModal(ctx, ui, state, W, H) {
     state.modal = null;
   }
 }
+
+// 威胁事件模态(辐射风暴/瘟疫/大规模入侵/寒潮)
+// 玩家选择: 用道具应对(消耗止血包/抗生素/辐射清除剂) 或 硬扛(掉血但不死)
+import { THREATS as THREATS_DEF, counterCost as threatCounterCost } from "../content/threats.js";
+import { canCounter as threatCanCounter, doCounter as threatDoCounter, doEndure as threatDoEndure } from "../engine/threatEngine.js";
+import { itemDef as threatItemDef } from "../content/items.js";
+
+export function drawThreatModal(ctx, ui, state, W, H) {
+  const m = state.modal;
+  const threat = THREATS_DEF[m.threatId];
+  if (!threat) { state.modal = null; return; }
+  ctx.fillStyle = "rgba(0,0,0,0.75)";
+  ctx.fillRect(0, 0, W, H);
+  const mw = Math.min(360, W - 24);
+  const mh = 360;
+  const mx = (W - mw) / 2;
+  const my = Math.max(16, (H - mh) / 2);
+  fillRoundRect(ctx, mx, my, mw, mh, T.radiusLg, T.panel, threat.color, 2);
+
+  // 标题
+  icon(ctx, threat.icon, mx + mw / 2, my + 38, 34);
+  text(ctx, threat.name, mx + mw / 2, my + 68, { size: T.fontLg, color: threat.color, align: "center", weight: "700" });
+  text(ctx, threat.desc, mx + mw / 2, my + 92, { size: T.fontXs, color: T.textDim, align: "center" });
+
+  // 应对选项: 显示需要的道具
+  const cost = threatCounterCost(state, threat);
+  const itemD = threatItemDef(cost.item);
+  const haveCount = state.inventory?.[cost.item] || 0;
+  const canCount = threatCanCounter(state, threat.id);
+  yy = my + 120;
+  fillRoundRect(ctx, mx + 20, yy, mw - 40, 70, T.radiusSm, T.panelAlt, canCount ? "#4caf87" : T.panelLine, canCount ? 2 : 1);
+  icon(ctx, itemD?.icon || "📦", mx + 44, yy + 35, 24);
+  text(ctx, threat.counterText, mx + 72, yy + 12, { size: T.fontSm, color: T.text, weight: "600" });
+  text(ctx, `需要 ${cost.amount} 个 (已有 ${haveCount})`, mx + 72, yy + 32, {
+    size: T.fontXs, color: canCount ? T.primary : T.danger,
+  });
+  text(ctx, `→ 成功抵御,无损失`, mx + 72, yy + 50, { size: 10, color: T.primary });
+  // 应对按钮(道具足够才可点)
+  const counterHover = inRect(ui.pointer.x, ui.pointer.y, mx + 20, yy, mw - 40, 70);
+  if (counterHover && ui.pointer.pressed && canCount) {
+    threatDoCounter(state, threat.id);
+    state.modal = null;
+    ui.pointer.pressed = false;
+  }
+
+  // 硬扛选项
+  yy += 82;
+  fillRoundRect(ctx, mx + 20, yy, mw - 40, 70, T.radiusSm, T.panelAlt, T.danger, 1);
+  icon(ctx, "💢", mx + 44, yy + 35, 24);
+  text(ctx, "硬扛过去", mx + 72, yy + 12, { size: T.fontSm, color: T.text, weight: "600" });
+  text(ctx, threat.penaltyText, mx + 72, yy + 32, { size: T.fontXs, color: T.danger });
+  text(ctx, "→ 全员心情-15(不致死)", mx + 72, yy + 50, { size: 10, color: T.textMute });
+  const endureHover = inRect(ui.pointer.x, ui.pointer.y, mx + 20, yy, mw - 40, 70);
+  if (endureHover && ui.pointer.pressed) {
+    threatDoEndure(state, threat.id);
+    state.modal = null;
+    ui.pointer.pressed = false;
+  }
+
+  // 提示
+  text(ctx, "居民生命最低降到1,绝不致死 — 但不及时治疗会虚弱", mx + mw / 2, my + mh - 24, {
+    size: 10, color: T.textMute, align: "center",
+  });
+}

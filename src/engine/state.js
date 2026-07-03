@@ -160,10 +160,15 @@ export function createNewState() {
 
     // 转生: 永恒加成(跨代保留)
     prestige: {
-      generation: 1, // 第几代(1=首次)
-      relics: 0, // 避难所信物数量
-      bonusMult: 0, // 全资源产出永久加成(每代+0.05)
-      unlockedEndings: [], // 已达成的结局id
+      generation: 1,
+      relics: 0,
+      bonusMult: 0,
+      unlockedEndings: [],
+    },
+
+    // 威胁事件: 辐射风暴/瘟疫/入侵/寒潮(消耗道具应对,不致死)
+    threat: {
+      timer: 1440, // 首次触发倒计时(12天);触发后重置12-18天
     },
   };
   // 主角初始位置 = home 地图入口格中心
@@ -251,6 +256,7 @@ export const DEFAULTS = {
   tech: { defense: 0, production: 0, bio: 0 },
   equipment: { equipped: {}, blueprints: [], storage: [] },
   prestige: { generation: 1, relics: 0, bonusMult: 0, unlockedEndings: [] },
+  threat: { timer: 1440 },
   // 单个幸存者的可缺失字段默认值
   survivor: {
     perks: [],

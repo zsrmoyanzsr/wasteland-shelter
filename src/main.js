@@ -252,6 +252,7 @@ function update(dt) {
   checkAchievements(state);
   updateRaid(state, scaledDt);
   updateCaravan(state, scaledDt);
+  updateThreat(state, scaledDt);
 
   // 浮动文字
   for (const f of state.floats) {
@@ -382,7 +383,8 @@ import {
 import { drawRecruitModal as _drawRecruit } from "./screens/screenTasks.js";
 import { drawExploreEventModal as _drawExploreEvent } from "./screens/screenExploreEvent.js";
 import { drawTradeModal as _drawTrade } from "./screens/screenTrade.js";
-import { drawTechTreeModal as _drawTechTree, drawInventoryModal as _drawInventory, drawArtifactSelectModal as _drawArtifactSelect } from "./screens/screenTech.js";
+import { drawTechTreeModal as _drawTechTree, drawInventoryModal as _drawInventory, drawArtifactSelectModal as _drawArtifactSelect, drawThreatModal as _drawThreat } from "./screens/screenTech.js";
+import { updateThreat } from "./engine/threatEngine.js";
 
 function drawActiveModal(ctx, state, ui, W, H) {
   const m = state.modal;
@@ -392,6 +394,7 @@ function drawActiveModal(ctx, state, ui, W, H) {
   if (m.type === "techTree") { _drawTechTree(ctx, ui, state, W, H); return; }
   if (m.type === "inventory") { _drawInventory(ctx, ui, state, W, H); return; }
   if (m.type === "artifactSelect") { _drawArtifactSelect(ctx, ui, state, W, H); return; }
+  if (m.type === "threat") { _drawThreat(ctx, ui, state, W, H); return; }
   switch (state.screen) {
     case SCREEN.BASE:
       if (m.type === "upgradeFacility") _drawUpgrade(ctx, ui, state, W, H);
