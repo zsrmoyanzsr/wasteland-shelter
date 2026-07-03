@@ -24,6 +24,8 @@ import { rollItemDrops } from "../content/items.js";
 import { itemDef } from "../content/items.js";
 import { addItems } from "../engine/inventory.js";
 import { getEquipStats } from "../engine/equipEngine.js";
+import { rollArtifactDrop, grantArtifact, getArtifactStats } from "../engine/artifactEngine.js";
+import { artifactDef as artifactDefCached, ARTIFACT_TIERS as ARTIFACT_TIERS_CACHED } from "../content/artifacts.js";
 import { drawGuideBanner } from "../ui/guideBanner.js";
 
 // 派遣持续时间(秒): 远的(danger高)明显更久,形成"刷近快速 vs 赌远高回报"取舍
@@ -489,6 +491,13 @@ function settleExpedition(state, e) {
   // ④ 物品掉落(派遣获取物品的核心途径):按POI类型随机掉落材料/组件/消耗品
   e.itemDrops = rollItemDrops(rng, e.regionType);
 
+  // ⑤ 神器掉落(极稀有): 按danger算概率+等级,存档唯一
+  const artifactTier = rollArtifactDrop(rng, info.danger);
+  e.artifactDrop = null;
+  if (artifactTier) {
+    e.artifactDrop = grantArtifact(state, artifactTier, rng);
+  }
+
   // 70% 概率触发事件
   if (rng() < 0.7) {
     e.event = rollEvent(rng);
@@ -680,6 +689,19 @@ export function drawResultModal(ctx, ui, state, W, H) {
         size: T.fontSm, color: T.accent, weight: "600",
       });
       yy += 24;
+    }
+  }
+
+  // 神器掉落(醒目显示)
+  if (e.artifactDrop) {
+    const aDef = artifactDefCached(e.artifactDrop);
+    const tDef = aDef ? ARTIFACT_TIERS_CACHED[aDef.tier] : null;
+    if (aDef && tDef) {
+      fillRoundRect(ctx, mx + 20, yy, mw - 40, 50, T.radiusSm, "rgba(240,169,59,0.15)", tDef.color, 2);
+      icon(ctx, aDef.icon, mx + 44, yy + 25, 24);
+      text(ctx, `${aDef.name} [${tDef.name}]`, mx + 70, yy + 8, { size: T.fontSm, color: tDef.color, weight: "700" });
+      text(ctx, aDef.desc.slice(0, 24), mx + 70, yy + 26, { size: 10, color: T.textMute });
+      yy += 56;
     }
   }
 

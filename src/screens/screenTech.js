@@ -7,6 +7,8 @@ import { TECH_TREE, techLevelDef } from "../content/tech.js";
 import { ITEMS, ITEM_CATS, itemDef } from "../content/items.js";
 import { canResearch, doResearch } from "../engine/techEngine.js";
 import { canAffordItems } from "../engine/inventory.js";
+import { ARTIFACTS, ARTIFACT_TIERS, artifactDef } from "../content/artifacts.js";
+import { equipArtifact } from "../engine/artifactEngine.js";
 
 // 科技树模态
 export function drawTechTreeModal(ctx, ui, state, W, H) {
@@ -210,6 +212,73 @@ export function drawInventoryModal(ctx, ui, state, W, H) {
   }
 
   if (button(ctx, ui, mx + mw / 2 - 60, my + mh - 44, 120, 34, "关闭", { fontSize: T.fontSm })) {
+    state.modal = null;
+  }
+}
+
+// 神器选择模态(居民详情点空槽时弹,从仓库选神器装备)
+export function drawArtifactSelectModal(ctx, ui, state, W, H) {
+  const m = state.modal;
+  const survivor = state.survivors.find((s) => s.id === m.survivorId);
+  if (!survivor) { state.modal = null; return; }
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  ctx.fillRect(0, 0, W, H);
+  const mw = Math.min(360, W - 24);
+  const mh = Math.min(500, H - 40);
+  const mx = (W - mw) / 2;
+  const my = (H - mh) / 2;
+  fillRoundRect(ctx, mx, my, mw, mh, T.radiusLg, T.panel, "#f0a93b", 2);
+  icon(ctx, "✨", mx + mw / 2, my + 30, 26);
+  text(ctx, `给 ${survivor.name} 选择神器`, mx + mw / 2, my + 52, { size: T.fontMd, color: T.text, align: "center", weight: "700" });
+  const listY = my + 76;
+  const listH = mh - 76 - 56;
+  if (inRect(ui.pointer.x, ui.pointer.y, mx, listY, mw, listH)) {
+    const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    if (wheel || drag) state._artSelScroll = Math.max(0, (state._artSelScroll || 0) + wheel * 0.5 + drag);
+  }
+  const storage = (state.equipment?.storage || []).filter((id) => {
+    const def = artifactDef(id);
+    return def && survivor.level >= def.minLevel;
+  });
+  const itemH = 56;
+  const totalH = storage.length * (itemH + 6);
+  const maxScroll = Math.max(0, totalH - listH);
+  state._artSelScroll = Math.min(state._artSelScroll || 0, maxScroll);
+  const yOff = state._artSelScroll || 0;
+  clipRound(ctx, mx + 8, listY, mw - 16, listH, T.radiusSm, () => {
+    if (storage.length === 0) {
+      text(ctx, "仓库无可用神器", mx + mw / 2, listY + 30, { size: T.fontSm, color: T.textMute, align: "center" });
+      text(ctx, "派遣到危险区域可获得神器", mx + mw / 2, listY + 50, { size: T.fontXs, color: T.textMute, align: "center" });
+      return;
+    }
+    let cy = listY - yOff;
+    for (const artId of storage) {
+      const def = artifactDef(artId);
+      const tDef = ARTIFACT_TIERS[def.tier];
+      const hover = inRect(ui.pointer.x, ui.pointer.y, mx + 12, cy, mw - 24, itemH);
+      fillRoundRect(ctx, mx + 12, cy, mw - 24, itemH, T.radiusSm, hover ? T.panelHi : T.panel, tDef.color, hover ? 2 : 1);
+      icon(ctx, def.icon, mx + 36, cy + itemH / 2, 22);
+      text(ctx, def.name, mx + 60, cy + 8, { size: T.fontSm, color: tDef.color, weight: "700" });
+      text(ctx, `[${tDef.name}]`, mx + mw - 24, cy + 8, { size: 10, color: tDef.color, align: "right" });
+      text(ctx, def.desc.slice(0, 22), mx + 60, cy + 28, { size: 10, color: T.textMute });
+      text(ctx, `需等级${def.minLevel}+`, mx + 60, cy + 42, { size: 10, color: survivor.level >= def.minLevel ? T.primary : T.danger });
+      if (hover && ui.pointer.pressed) {
+        equipArtifact(state, survivor, artId);
+        state.modal = null;
+        ui.pointer.pressed = false;
+      }
+      cy += itemH + 6;
+    }
+  });
+  if (maxScroll > 0) {
+    const trackX = mx + mw - 8;
+    fillRoundRect(ctx, trackX, listY, 3, listH, 1.5, T.panelLine);
+    const thumbH = Math.max(30, (listH / totalH) * listH);
+    const thumbY = listY + (yOff / maxScroll) * (listH - thumbH);
+    fillRoundRect(ctx, trackX, thumbY, 3, thumbH, 1.5, T.textDim);
+  }
+  if (button(ctx, ui, mx + mw / 2 - 60, my + mh - 44, 120, 34, "取消", { fontSize: T.fontSm })) {
     state.modal = null;
   }
 }

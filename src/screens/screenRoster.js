@@ -17,6 +17,8 @@ import { contentRect } from "./screenHud.js";
 import { PERKS, populationCap } from "../content/survivors.js";
 import { FACILITY_TYPES, facilityStats } from "../content/facilities.js";
 import { drawAvatar } from "../ui/avatar.js";
+import { survivorTier as survivorTierCached, getEquippedArtifacts as getEquippedArtsCached, unequipArtifact as unequipArtifactCached } from "../engine/artifactEngine.js";
+import { artifactDef as artifactDefCached, ARTIFACT_TIERS as ARTIFACT_TIERS_CACHED } from "../content/artifacts.js";
 
 export function drawRosterScreen(ctx, state, ui, W, H) {
   const cr = contentRect(W, H);
@@ -229,6 +231,31 @@ export function drawDetailModal(ctx, ui, state, W, H) {
     });
   } else {
     text(ctx, "当前空闲", mx + 24, yy, { size: T.fontSm, color: T.textDim });
+  }
+
+  // 神器装备区
+  yy += 26;
+  const maxSlots = survivorTierCached(state, s);
+  const equippedArts = getEquippedArtsCached(state, s.id);
+  text(ctx, `✨ 神器 (${equippedArts.length}/${maxSlots}):`, mx + 24, yy, { size: T.fontSm, color: T.textDim, weight: "600" });
+  yy += 20;
+  for (let si = 0; si < maxSlots; si++) {
+    const artId = equippedArts[si];
+    const slotHover = inRect(ui.pointer.x, ui.pointer.y, mx + 24, yy, mw - 48, 32);
+    if (artId) {
+      const aDef = artifactDefCached(artId);
+      const tDef = aDef ? ARTIFACT_TIERS_CACHED[aDef.tier] : null;
+      fillRoundRect(ctx, mx + 24, yy, mw - 48, 32, T.radiusSm, tDef ? "rgba(240,169,59,0.1)" : T.panel, tDef?.color || T.panelLine, 1);
+      icon(ctx, aDef?.icon || "❓", mx + 44, yy + 16, 16);
+      text(ctx, aDef?.name || "未知", mx + 60, yy + 8, { size: T.fontXs, color: tDef?.color || T.text, weight: "600" });
+      text(ctx, `[${tDef?.name || ""}]`, mx + mw - 60, yy + 8, { size: 10, color: tDef?.color || T.textMute, align: "right" });
+      if (slotHover && ui.pointer.pressed) { unequipArtifactCached(state, s, si); ui.pointer.pressed = false; }
+    } else {
+      fillRoundRect(ctx, mx + 24, yy, mw - 48, 32, T.radiusSm, T.bg, T.panelLine, 1);
+      text(ctx, "空槽位 (点击仓库装备)", mx + 44, yy + 10, { size: T.fontXs, color: T.textMute });
+      if (slotHover && ui.pointer.pressed) { state.modal = { type: "artifactSelect", survivorId: s.id, slotIndex: si }; ui.pointer.pressed = false; }
+    }
+    yy += 36;
   }
 
   // 按钮
