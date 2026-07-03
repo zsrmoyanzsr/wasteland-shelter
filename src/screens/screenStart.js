@@ -1,7 +1,9 @@
-// 开始屏幕: 标题 + 开始/继续按钮 + 简介
+// 开始屏幕: 标题 + 开始/继续按钮 + 简介 + 存档码导入导出
 import { THEME as T } from "../ui/theme.js";
-import { fillRoundRect, text, textCenter, button, icon, panelGradient } from "../ui/ui.js";
+import { fillRoundRect, text, textCenter, button, icon, panelGradient, clipRound } from "../ui/ui.js";
 import { hasSave } from "../engine/save.js";
+import { exportSaveCode, importSaveCode } from "../engine/cloudSave.js";
+import { saveGame } from "../engine/save.js";
 
 export function drawStartScreen(ctx, state, ui, W, H) {
   // 渐变背景
@@ -89,10 +91,119 @@ export function drawStartScreen(ctx, state, ui, W, H) {
     }
   }
 
+  // 存档码: 导出/导入(跨设备转移进度)
+  const saveRowY = py + ph - 28;
+  if (button(ctx, ui, bx, saveRowY, bw / 2 - 6, 26, "📤 导出存档", {
+    fontSize: T.fontXs, color: T.panelHi, textColor: T.textDim,
+  })) {
+    handleExport(state);
+  }
+  if (button(ctx, ui, bx + bw / 2 + 6, saveRowY, bw / 2 - 6, 26, "📥 导入存档", {
+    fontSize: T.fontXs, color: T.panelHi, textColor: T.textDim,
+  })) {
+    handleImport(state);
+  }
+
   // 底部提示
   text(ctx, "H5 经营 · 招募/派遣/建设/挂机", W / 2, H - 24, {
     size: T.fontXs,
     color: T.textMute,
     align: "center",
   });
+
+  // 导出码显示模态
+  if (state._exportCode) drawExportCodeModal(ctx, ui, state, W, H);
+}
+
+// 导出处理: 生成存档码,尝试复制到剪贴板,弹模态显示
+async function handleExport(state) {
+  // 导出当前游戏状态(如果有存档从localStorage读,否则用当前state)
+  const cur = window.__game?.state || state;
+  if (!cur || !cur.res) {
+    alert("还没有游戏进度可导出,请先开始游戏。");
+    return;
+  }
+  try {
+    const code = await exportSaveCode(cur);
+    state._exportCode = code;
+    // 尝试自动复制到剪贴板
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(
+        () => console.log("存档码已复制到剪贴板"),
+        () => {} // 复制失败也不影响,玩家可手动从模态复制
+      );
+    }
+  } catch (e) {
+    alert("导出失败: " + e.message);
+  }
+}
+
+// 导入处理: prompt 粘贴存档码,校验后写入
+async function handleImport(state) {
+  const code = prompt("请粘贴存档码(以 WS- 开头):", "");
+  if (!code) return;
+  try {
+    const imported = await importSaveCode(code);
+    // 写入 localStorage 让 loadGame 读取,然后请求重新加载
+    const payload = { version: imported.version, savedAt: Date.now(), state: imported };
+    // cells 需转成 __u8 格式(serializeState 那样的)
+    localStorage.setItem("wasteland_shelter_save_v2", JSON.stringify({
+      version: imported.version, savedAt: Date.now(),
+      state: JSON.parse(JSON.stringify(imported, (k, v) => v instanceof Uint8Array ? { __u8: Array.from(v) } : v)),
+    }));
+    alert("存档导入成功!点击「继续游戏」恢复进度。");
+    // 刷新页面让游戏重新加载存档
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    alert("导入失败: " + e.message);
+  }
+}
+
+// 导出码显示模态(玩家可手动复制)
+function drawExportCodeModal(ctx, ui, state, W, H) {
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  ctx.fillRect(0, 0, W, H);
+  const mw = Math.min(380, W - 32);
+  const mh = 320;
+  const mx = (W - mw) / 2;
+  const my = (H - mh) / 2;
+  fillRoundRect(ctx, mx, my, mw, mh, T.radiusLg, T.panel, T.primary, 2);
+  icon(ctx, "📤", mx + mw / 2, my + 36, 30);
+  text(ctx, "你的存档码", mx + mw / 2, my + 64, { size: T.fontLg, color: T.text, align: "center", weight: "700" });
+  text(ctx, navigator.clipboard ? "已复制到剪贴板,也可手动复制下方文本" : "请复制下方文本保存", mx + mw / 2, my + 88, {
+    size: T.fontXs, color: T.textDim, align: "center",
+  });
+  // 存档码显示框(可滚动/换行)
+  const codeY = my + 110;
+  const codeH = 140;
+  fillRoundRect(ctx, mx + 20, codeY, mw - 40, codeH, T.radiusSm, T.bg, T.panelLine, 1);
+  clipRound(ctx, mx + 24, codeY + 6, mw - 48, codeH - 12, T.radiusSm, () => {
+    ctx.font = `400 ${T.fontXs}px monospace`;
+    ctx.fillStyle = T.text;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    // 按字符宽度换行显示
+    const code = state._exportCode;
+    const maxW = mw - 56;
+    let line = "", ly = codeY + 10;
+    for (const ch of code) {
+      const test = line + ch;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, mx + 28, ly);
+        ly += 16;
+        line = ch;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, mx + 28, ly);
+  });
+  // 提示
+  text(ctx, "换设备时:打开游戏 → 导入存档 → 粘贴此码", mx + mw / 2, my + mh - 56, {
+    size: T.fontXs, color: T.accent, align: "center", weight: "600",
+  });
+  // 关闭按钮
+  if (button(ctx, ui, mx + mw / 2 - 60, my + mh - 40, 120, 32, "关闭", { fontSize: T.fontSm })) {
+    state._exportCode = null;
+  }
 }

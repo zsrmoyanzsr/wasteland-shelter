@@ -17,6 +17,8 @@ export function createInput(canvas) {
   const keys = new Set(); // 当前按住的键码
   const keysPressed = new Set(); // 本帧按下的键(单次)
   let wheelDelta = 0; // 本帧滚轮累计(向下正,向上负)
+  let dragScrollDelta = 0; // 本帧触摸拖拽滚动累计(向下拖正)
+  let lastDragY = 0; // 上次拖拽位置(用于算增量)
 
   function toLocal(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
@@ -42,6 +44,7 @@ export function createInput(canvas) {
     pointer.downY = p.y;
     pointer.dragX = p.x;
     pointer.dragY = p.y;
+    lastDragY = p.y; // 以按下点为拖拽基准
   }
 
   function onMove(e) {
@@ -53,8 +56,12 @@ export function createInput(canvas) {
     if (pointer.down) {
       pointer.dragX = p.x;
       pointer.dragY = p.y;
+      // 触摸拖拽滚动: 累计 y 增量(手指向下拖=内容向下滚=正值)
+      if (lastDragY !== 0) {
+        dragScrollDelta += p.y - lastDragY;
+      }
+      lastDragY = p.y;
       // 滚动误触防护: 按下后移动超过阈值(8px)则视为拖拽/滚动,取消点击意图
-      // 避免: 列表滚动松手时 pointer 仍在某项上 + pressed 仍 true → 误触发点击
       const dist = Math.hypot(p.x - pointer.downX, p.y - pointer.downY);
       if (dist > 8 && pointer.pressed) {
         pointer.pressed = false;
@@ -65,6 +72,7 @@ export function createInput(canvas) {
   function onUp(e) {
     pointer.down = false;
     pointer.justReleased = true;
+    lastDragY = 0; // 重置,下次按下重新基准
   }
 
   function onKeyDown(e) {
@@ -107,12 +115,19 @@ export function createInput(canvas) {
       wheelDelta = 0;
       return d;
     },
+    // 消费并返回本帧触摸拖拽滚动增量(手机滑动列表用,向下拖为正)
+    consumeDragScroll() {
+      const d = dragScrollDelta;
+      dragScrollDelta = 0;
+      return d;
+    },
     // 每帧末调用: 重置单帧信号
     endFrame() {
       pointer.pressed = false;
       pointer.justReleased = false;
       keysPressed.clear();
       wheelDelta = 0;
+      dragScrollDelta = 0;
     },
     destroy() {
       canvas.removeEventListener("mousedown", onDown);

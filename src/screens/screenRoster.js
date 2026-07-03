@@ -41,10 +41,11 @@ export function drawRosterScreen(ctx, state, ui, W, H) {
 
   let yOffset = state._rosterScroll || 0;
   const maxScroll = Math.max(0, totalH - listH);
-  // 滚轮: 仅当鼠标在列表区时
+  // 滚轮 + 触摸拖拽
   if (inRect(ui.pointer.x, ui.pointer.y, listX, listY, listW, listH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
-    if (wheel) yOffset += wheel * 0.5;
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    yOffset += wheel * 0.5 + drag;
   }
   yOffset = Math.max(0, Math.min(maxScroll, yOffset));
   state._rosterScroll = yOffset;

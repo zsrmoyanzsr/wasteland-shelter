@@ -88,7 +88,8 @@ export function drawTasksScreen(ctx, state, ui, W, H) {
   const maxScroll = Math.max(0, tasksTotal - taskListH);
   if (inRect(ui.pointer.x, ui.pointer.y, ox + 12, yy, cr.w - 24, taskListH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
-    if (wheel) yOff += wheel * 0.4;
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    yOff += wheel * 0.4 + drag;
   }
   yOff = Math.max(0, Math.min(maxScroll, yOff));
   state._taskScroll = yOff;
@@ -109,7 +110,8 @@ export function drawTasksScreen(ctx, state, ui, W, H) {
   const achMaxScroll = Math.max(0, achTotal - achListH);
   if (inRect(ui.pointer.x, ui.pointer.y, ox + 12, yy, cr.w - 24, achListH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
-    if (wheel) achOff += wheel * 0.4;
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    achOff += wheel * 0.4 + drag;
   }
   achOff = Math.max(0, Math.min(achMaxScroll, achOff));
   state._achScroll = achOff;

@@ -72,10 +72,11 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
   const contentTotalH = facTotalH + 20 + buildPanelH;
   const maxScroll = Math.max(0, contentTotalH - scrollBoxH);
 
-  // 滚轮
+  // 滚轮 + 触摸拖拽滚动
   if (inRect(ui.pointer.x, ui.pointer.y, ox + pad - 4, scrollBoxY, cr.w - pad * 2 + 8, scrollBoxH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
-    if (wheel) state._baseScroll = Math.max(0, Math.min(maxScroll, (state._baseScroll || 0) + wheel * 0.5));
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    if (wheel || drag) state._baseScroll = Math.max(0, Math.min(maxScroll, (state._baseScroll || 0) + wheel * 0.5 + drag));
   }
   const yOff = state._baseScroll || 0;
 

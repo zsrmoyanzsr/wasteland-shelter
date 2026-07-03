@@ -60,7 +60,8 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
   // 滚轮
   if (inRect(ui.pointer.x, ui.pointer.y, ox + 12, listBoxY, cr.w - 24, listBoxH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
-    if (wheel) state._dispatchScroll = Math.max(0, (state._dispatchScroll || 0) + wheel * 0.5);
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    if (wheel || drag) state._dispatchScroll = Math.max(0, (state._dispatchScroll || 0) + wheel * 0.5 + drag);
   }
 
   const running = state.expeditions.filter((e) => e.state !== "done");

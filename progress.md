@@ -643,3 +643,32 @@ prompt 模板: `"anime style, {角色描述}, post apocalyptic survivor, head po
 - test_deep 增至 **65项**(+4: 袭击后期/stats累计/双重扣减/regionType容错)
 - **5套全过**: logic26 + edge14 + deep65 + ui27 + balance,全程0 console error
 - 4个playtest agent脚本跑完即删,不留痕
+
+## v2.6 触摸滚动 + 宽屏修复 + 存档码系统 (本轮)
+
+> 解决三大体验问题: 手机不能滑动列表、电脑宽屏被侧栏遮挡、换设备进度丢失。
+
+### 修复1: 触摸拖拽滚动(手机终于能滑动了) — input.js
+- **问题**: 所有列表(基地/居民/任务/派遣)只用鼠标滚轮(consumeWheel),手机touch事件不触发wheel → **手机玩家完全无法滚动列表**,内容多了显示不全
+- **修复**: input.js 新增 dragScrollDelta(触摸拖拽y增量)+ consumeDragScroll()
+- 各屏滚动逻辑加 drag 支持: scroll += wheel*0.5 + drag(1:1跟手)
+- 验证: 鼠标拖拽测试 scroll 0→90,生效
+
+### 修复2: 宽屏(电脑)内容被侧栏遮挡 — screenHud + 4屏
+- **问题1**: 宽屏contentRect.h到屏幕底(720),无呼吸空间(居民屏811像素贴边)
+  → contentRect宽屏h减16px留底部留白
+- **问题2**: 所有屏标题/卡片硬编码x=16,被左侧栏(0~96)遮挡
+  → 引入ox=cr.x,base/roster/tasks/dispatch四屏内容全基于cr.x
+- 验证: 宽屏各屏内容全部移出侧栏区(x≥96),底部边缘内容0
+
+### 新增3: 存档码系统(跨设备转移进度) — engine/cloudSave.js
+- **方案**: 纯前端零后端,存档JSON→精简(去运行时数据)→gzip压缩→Base64→存档码
+- **导出**: 开始屏"📤导出存档"→生成WS-前缀码(约1600字符)→自动复制到剪贴板+模态显示
+- **导入**: 开始屏"📥导入存档"→prompt粘贴码→校验→写入localStorage→重载
+- **压缩率**: 完整存档4.4KB → gzip 852B → Base64 1136字符(可复制)
+- 验证: 导出导入往返测试,base.level/parts/day完整保留 ✅
+- 用浏览器原生CompressionStream,零依赖
+
+### 测试
+- 5套全过(logic26+edge14+deep65+ui27+balance),0 console error
+- 存档码往返测试通过
