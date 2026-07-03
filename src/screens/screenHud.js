@@ -57,7 +57,7 @@ export function contentRect(W, H) {
 }
 
 // 绘制顶部资源条
-export function drawTopBar(ctx, state, W) {
+export function drawTopBar(ctx, state, ui, W) {
   const wide = isWideLayout();
   const barX = wide ? SIDEBAR_W : 0;
   const barW = wide ? W - SIDEBAR_W : W;
@@ -91,7 +91,19 @@ export function drawTopBar(ctx, state, W) {
     });
     text(ctx, fmtNum(capv), x + 30, 32, { size: T.fontXs, color: T.textMute });
     x += chipW;
-    if (x + chipW > barX + barW - 8) break;
+    if (x + chipW > barX + barW - 36) break;
+  }
+  // 背包入口(资源条最右)
+  const invHover = inRect(ui.pointer.x, ui.pointer.y, barX + barW - 32, 8, 26, 40);
+  if (invHover) fillRoundRect(ctx, barX + barW - 34, 8, 30, 40, T.radiusSm, T.panelHi);
+  icon(ctx, "🎒", barX + barW - 18, 28, 20);
+  const invCount = state.inventory ? Object.keys(state.inventory).filter((k) => state.inventory[k] > 0).length : 0;
+  if (invCount > 0) {
+    text(ctx, String(invCount), barX + barW - 8, 12, { size: 10, color: T.accent, weight: "700" });
+  }
+  if (invHover && ui.pointer.pressed) {
+    state.modal = { type: "inventory" };
+    ui.pointer.pressed = false;
   }
 }
 

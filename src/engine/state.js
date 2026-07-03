@@ -20,7 +20,8 @@ export const SCREEN = {
 
 // 存档版本号: 每次结构性改动(加字段/改结构)时 +1
 // 老存档读档时会按 migrations 链逐步升级到此版本
-export const CURRENT_VERSION = 3;
+// v3: 商队系统; v4: 物品/背包 + 科技树; v5: 装备系统; v6: 转生
+export const CURRENT_VERSION = 6;
 
 export function createNewState() {
   const st = {
@@ -144,6 +145,26 @@ export function createNewState() {
       leaveTimer: 0, // 在场剩余时间(秒),到点自动离开
       offers: [], // 当前交易方案 [{give:{资源:量}, get:{资源:量}, taken:false}]
     },
+
+    // 物品/背包: {物品id: 数量}
+    inventory: {},
+
+    // 科技树: 3条线(defense/production/bio),每条0-5级(0=未研发)
+    tech: { defense: 0, production: 0, bio: 0 },
+
+    // 装备: 已制造的装备池 + 蓝图(已解锁的配方)
+    // equipment.equipped[survivorId] = {weapon, armor, accessory}
+    // equipment.blueprints = ["weapon_rifle", ...] 已解锁配方id
+    // equipment.storage = [{id, def, ...}] 仓库中待分配的装备
+    equipment: { equipped: {}, blueprints: [], storage: [] },
+
+    // 转生: 永恒加成(跨代保留)
+    prestige: {
+      generation: 1, // 第几代(1=首次)
+      relics: 0, // 避难所信物数量
+      bonusMult: 0, // 全资源产出永久加成(每代+0.05)
+      unlockedEndings: [], // 已达成的结局id
+    },
   };
   // 主角初始位置 = home 地图入口格中心
   const homeMap = currentMap(st);
@@ -225,6 +246,11 @@ export const DEFAULTS = {
   guide: { explored: false, dispatched: false, built: false, recruited: false, dismissed: [] },
   // 流浪商队(mergeDefaults 补全)
   caravan: { timer: 720, here: false, leaveTimer: 0, offers: [] },
+  // 物品/科技/装备/转生(mergeDefaults 补全)
+  inventory: {},
+  tech: { defense: 0, production: 0, bio: 0 },
+  equipment: { equipped: {}, blueprints: [], storage: [] },
+  prestige: { generation: 1, relics: 0, bonusMult: 0, unlockedEndings: [] },
   // 单个幸存者的可缺失字段默认值
   survivor: {
     perks: [],

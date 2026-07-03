@@ -47,6 +47,17 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
     state.modal = { type: "baseUpgrade" };
     ui.pointer.pressed = false;
   }
+  // 🔬 研究中心按钮(科技树入口)
+  const techHover = inRect(ui.pointer.x, ui.pointer.y, ox + pad + 162, cr.y + 32, 110, 24);
+  const totalTech = (state.tech?.defense||0) + (state.tech?.production||0) + (state.tech?.bio||0);
+  fillRoundRect(ctx, ox + pad + 160, cr.y + 30, 114, 26, T.radiusSm, techHover ? T.panelHi : T.panel, "#e0588e", techHover ? 2 : 1);
+  text(ctx, `🔬 研究 ${totalTech}/15`, ox + pad + 166, cr.y + 37, {
+    size: T.fontXs, color: "#e0588e", weight: "700",
+  });
+  if (techHover && ui.pointer.pressed) {
+    state.modal = { type: "techTree" };
+    ui.pointer.pressed = false;
+  }
 
   // 引导横幅(有提示才占位,无则返回0)
   const guideH = drawGuideBanner(ctx, ui, state, ox + pad - 2, cr.y + 58, cr.w - pad * 2 + 2);

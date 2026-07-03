@@ -192,7 +192,7 @@ const migrateTest = await page.evaluate(async () => {
   };
 });
 T("存档迁移 v1→v2: 加载成功", migrateTest.loaded, "");
-T("存档迁移: version升到最新(3)", migrateTest.version === 3, "version=" + migrateTest.version);
+T("存档迁移: version升到最新(6)", migrateTest.version === 6, "version=" + migrateTest.version);
 T("存档迁移: 老map→新maps结构", migrateTest.hasMaps && migrateTest.mapRemoved, `hasMaps=${migrateTest.hasMaps} mapRemoved=${migrateTest.mapRemoved}`);
 T("存档迁移: player补全health", migrateTest.hasHealth, "");
 T("存档迁移: survivor补全6技能", migrateTest.hasSkills, "");
@@ -597,7 +597,7 @@ const migrateV3 = await page.evaluate(async () => {
   };
 });
 T("[存档迁移 v2→v3] 加载成功", migrateV3.loaded, "");
-T("[存档迁移 v2→v3] version升到3", migrateV3.version === 3, "v=" + migrateV3.version);
+T("[存档迁移 v2→v3] version升到最新(6)", migrateV3.version === 6, "v=" + migrateV3.version);
 T("[存档迁移 v2→v3] 补全caravan字段", migrateV3.hasCaravan && migrateV3.caravanHasTimer && migrateV3.caravanHasOffers, "");
 
 // ═══════════ 盲区27: 派遣属性加成 — 队伍技能/特长影响产出(组队策略) ═══════════

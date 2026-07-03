@@ -20,6 +20,9 @@ import { rollEvent } from "../content/events.js";
 import { makeRng, generateSurvivor } from "../content/survivors.js";
 import { addLog, addFloat, SCREEN } from "../engine/state.js";
 import { markDispatched } from "../engine/guide.js";
+import { rollItemDrops } from "../content/items.js";
+import { itemDef } from "../content/items.js";
+import { addItems } from "../engine/inventory.js";
 import { drawGuideBanner } from "../ui/guideBanner.js";
 
 // 派遣持续时间(秒): 远的(danger高)明显更久,形成"刷近快速 vs 赌远高回报"取舍
@@ -479,6 +482,9 @@ function settleExpedition(state, e) {
   }
   e.rewards = baseRewards;
 
+  // ④ 物品掉落(派遣获取物品的核心途径):按POI类型随机掉落材料/组件/消耗品
+  e.itemDrops = rollItemDrops(rng, e.regionType);
+
   // 70% 概率触发事件
   if (rng() < 0.7) {
     e.event = rollEvent(rng);
@@ -486,6 +492,7 @@ function settleExpedition(state, e) {
   } else {
     // 直接完成(无事件): 发奖后统一收尾
     applyRewards(state, baseRewards);
+    if (e.itemDrops) addItems(state, e.itemDrops);
     finishExpedition(state, e, 20); // 释放成员 + 20XP + 计数
   }
 }
@@ -603,6 +610,7 @@ function resolveEvent(state, e, choice, ctxObj) {
 
   // 结算完成: applyRewards 已带 Math.max(0) 下限保护(负 reward 不会让资源变负)
   applyRewards(state, e.rewards);
+  if (e.itemDrops) addItems(state, e.itemDrops);
   finishExpedition(state, e, 25); // 释放成员 + 25XP + 计数 + 设 done
   state.modal = { type: "expeditionResult", expId: e.id, justResolved: true };
 }
@@ -654,6 +662,20 @@ export function drawResultModal(ctx, ui, state, W, H) {
         weight: "600",
       });
       yy += 28;
+    }
+  }
+
+  // 物品掉落显示
+  const itemKeys = e.itemDrops ? Object.keys(e.itemDrops).filter((k) => e.itemDrops[k] > 0) : [];
+  if (itemKeys.length > 0) {
+    for (const k of itemKeys) {
+      const it = itemDef(k);
+      if (!it) continue;
+      icon(ctx, it.icon, mx + 40, yy + 10, 18);
+      text(ctx, `${it.name} ×${e.itemDrops[k]}`, mx + 60, yy, {
+        size: T.fontSm, color: T.accent, weight: "600",
+      });
+      yy += 24;
     }
   }
 

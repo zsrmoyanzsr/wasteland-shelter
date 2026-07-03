@@ -42,7 +42,22 @@ const migrations = {
   3: (s) => {
     if (!s.caravan) s.caravan = { timer: 720, here: false, leaveTimer: 0, offers: [] };
     s.version = 3;
-    // 注: 深度字段由 mergeDefaults 统一补
+  },
+  // v3 → v4: 加入 物品/背包系统
+  4: (s) => {
+    if (!s.inventory) s.inventory = {};
+    s.version = 4;
+  },
+  // v4 → v5: 加入 科技树
+  5: (s) => {
+    if (!s.tech) s.tech = { defense: 0, production: 0, bio: 0 };
+    s.version = 5;
+  },
+  // v5 → v6: 加入 装备系统 + 转生
+  6: (s) => {
+    if (!s.equipment) s.equipment = { equipped: {}, blueprints: [], storage: [] };
+    if (!s.prestige) s.prestige = { generation: 1, relics: 0, bonusMult: 0, unlockedEndings: [] };
+    s.version = 6;
   },
 };
 
@@ -234,6 +249,28 @@ function mergeDefaults(s) {
   if (s.caravan.here == null) s.caravan.here = false;
   if (s.caravan.leaveTimer == null) s.caravan.leaveTimer = 0;
   if (!Array.isArray(s.caravan.offers)) s.caravan.offers = [];
+
+  // inventory(物品/背包)
+  if (!s.inventory || typeof s.inventory !== "object") s.inventory = {};
+
+  // tech(科技树)
+  if (!s.tech) s.tech = { ...DEFAULTS.tech };
+  for (const k of ["defense", "production", "bio"]) {
+    if (s.tech[k] == null) s.tech[k] = 0;
+  }
+
+  // equipment(装备系统)
+  if (!s.equipment) s.equipment = { ...DEFAULTS.equipment };
+  if (!s.equipment.equipped || typeof s.equipment.equipped !== "object") s.equipment.equipped = {};
+  if (!Array.isArray(s.equipment.blueprints)) s.equipment.blueprints = [];
+  if (!Array.isArray(s.equipment.storage)) s.equipment.storage = [];
+
+  // prestige(转生)
+  if (!s.prestige) s.prestige = { ...DEFAULTS.prestige };
+  for (const k of ["generation", "relics", "bonusMult"]) {
+    if (s.prestige[k] == null) s.prestige[k] = k === "generation" ? 1 : 0;
+  }
+  if (!Array.isArray(s.prestige.unlockedEndings)) s.prestige.unlockedEndings = [];
 
   // maps: 重建若缺失,补全缺失地图
   if (!s.maps) s.maps = createMaps();

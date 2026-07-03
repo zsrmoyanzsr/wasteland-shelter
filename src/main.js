@@ -24,6 +24,7 @@ import { drawTasksScreen, updateTasks } from "./screens/screenTasks.js";
 import { updatePlayer, updateExplore } from "./engine/worldUpdate.js";
 import { updateUnlocks, currentMap, totalDiscovered } from "./content/regions.js";
 import { updateCaravan } from "./engine/caravan.js";
+import { collectTechBonuses } from "./content/tech.js";
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -280,7 +281,11 @@ function updateRaid(state, dt) {
 }
 
 function triggerRaid(state) {
-  // 防御值总和(围墙) + 居民 + 基地等级加成(让防御随发展成长,避免后期固定)
+  // 科技树防御加成: 力场穹顶(防御5级)完全免疫,能量护盾(4级)免疫普通袭击
+  const techBonus = collectTechBonuses(state);
+  if (techBonus.raidTotalImmune) { addLog(state, "🛡️ 力场穹顶抵御了所有袭击!", "#5b9bd5"); return; }
+  if (techBonus.raidImmune) { addLog(state, "🛡️ 能量护盾抵御了袭击!", "#5b9bd5"); return; }
+  // 防御值总和(围墙) + 居民 + 基地等级加成
   let defense = 0;
   for (const f of state.base.facilities) {
     if (f.type === "wall") {
@@ -297,9 +302,10 @@ function triggerRaid(state) {
     addLog(state, `抵御了一次掠夺者袭击! 防御 ${Math.floor(totalDef)} vs 攻击 ${Math.floor(attack)}`, T.primary);
   } else {
     // 失败: 损失资源(随天数适度增长,后期有威慑但不致命)
+    const lossMult = techBonus.raidLossMult || 1; // 防御科技1级: 损失减半
     const lossFactor = Math.min(state.day / 50, 3);
-    const scrapLoss = Math.min(state.res.scrap * 0.25, 10 + lossFactor * 8);
-    const foodLoss = 5 + lossFactor * 3;
+    const scrapLoss = Math.min(state.res.scrap * 0.25, 10 + lossFactor * 8) * lossMult;
+    const foodLoss = (5 + lossFactor * 3) * lossMult;
     state.res.scrap = Math.max(0, state.res.scrap - scrapLoss);
     state.res.food = Math.max(0, state.res.food - foodLoss);
     addLog(state, `袭击突破防线! 损失 ${Math.floor(scrapLoss)} 废铁、${Math.floor(foodLoss)} 食物。升级围墙与基地可防御。`, T.danger);
@@ -346,7 +352,7 @@ function render() {
 
   // HUD 始终在最上(除开始屏)。模态激活时导航也不响应点击
   if (modalActive) input.pointer.pressed = false;
-  drawTopBar(ctx, state, W);
+  drawTopBar(ctx, state, input, W);
   drawBottomNav(ctx, state, input, W, H);
 
   // 模态绘制: 恢复真实 pressed,模态在最顶层处理点击
@@ -376,15 +382,15 @@ import {
 import { drawRecruitModal as _drawRecruit } from "./screens/screenTasks.js";
 import { drawExploreEventModal as _drawExploreEvent } from "./screens/screenExploreEvent.js";
 import { drawTradeModal as _drawTrade } from "./screens/screenTrade.js";
+import { drawTechTreeModal as _drawTechTree, drawInventoryModal as _drawInventory } from "./screens/screenTech.js";
 
 function drawActiveModal(ctx, state, ui, W, H) {
   const m = state.modal;
   if (!m) return;
-  // 交易模态: 全局(任何屏都能弹),不绑定特定 screen
-  if (m.type === "trade") {
-    _drawTrade(ctx, ui, state, W, H);
-    return;
-  }
+  // 全局模态(任何屏都能弹): trade / techTree / inventory
+  if (m.type === "trade") { _drawTrade(ctx, ui, state, W, H); return; }
+  if (m.type === "techTree") { _drawTechTree(ctx, ui, state, W, H); return; }
+  if (m.type === "inventory") { _drawInventory(ctx, ui, state, W, H); return; }
   switch (state.screen) {
     case SCREEN.BASE:
       if (m.type === "upgradeFacility") _drawUpgrade(ctx, ui, state, W, H);
