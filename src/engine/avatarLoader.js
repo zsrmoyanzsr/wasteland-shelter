@@ -36,18 +36,20 @@ export function initAvatars() {
 
 async function loadExternalAvatars() {
   try {
-    const resp = await fetch("/avatars/manifest.json");
+    // BASE_URL: vite 注入,本地为 './',GitHub Pages 为 '/wasteland-shelter/'
+    const base = import.meta.env.BASE_URL;
+    const resp = await fetch(base + "avatars/manifest.json");
     if (!resp.ok) return;
     const list = await resp.json();
     if (!Array.isArray(list) || list.length === 0) return;
     // 外部图存在则替换内联图(让用户能覆盖)
     const ext = await Promise.all(
-      list.map((name) => loadImage("/avatars/" + name))
+      list.map((name) => loadImage(base + "avatars/" + name))
     );
     const ok = ext.filter((img) => img && img.naturalWidth > 0);
     if (ok.length > 0) _images = ok;
     // 外部主角立绘(若有则覆盖)
-    const heroExt = await loadImage("/avatars/hero.png");
+    const heroExt = await loadImage(base + "avatars/hero.png");
     if (heroExt && heroExt.naturalWidth > 0) _heroImage = heroExt;
   } catch {
     /* 忽略,用内联图 */
