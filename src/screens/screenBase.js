@@ -32,13 +32,15 @@ const CATS = [
 
 export function drawBaseScreen(ctx, state, ui, W, H) {
   const cr = contentRect(W, H);
+  const ox = cr.x; // 内容区x偏移(宽屏=96侧栏右侧,窄屏=0)
+  const pad = 16; // 内容左/右边距
 
   // 标题(字号略小避免和下方等级按钮挤)
-  text(ctx, "🏠 避难所基地", 16, cr.y + 6, { size: T.fontMd, color: T.text, weight: "700" });
+  text(ctx, "🏠 避难所基地", ox + pad, cr.y + 6, { size: T.fontMd, color: T.text, weight: "700" });
   // 基地等级(可点升级) — 下移到 cr.y+30 避免和标题底部重叠
-  const lvHover = inRect(ui.pointer.x, ui.pointer.y, 16, cr.y + 32, 150, 24);
-  fillRoundRect(ctx, 14, cr.y + 30, 154, 26, T.radiusSm, lvHover ? T.panelHi : T.panel, T.accent, lvHover ? 2 : 1);
-  text(ctx, `⬆ 主基地 Lv.${state.base.level} ${state.base.level < 5 ? "(升级)" : "(满级)"}`, 20, cr.y + 37, {
+  const lvHover = inRect(ui.pointer.x, ui.pointer.y, ox + pad, cr.y + 32, 150, 24);
+  fillRoundRect(ctx, ox + pad - 2, cr.y + 30, 154, 26, T.radiusSm, lvHover ? T.panelHi : T.panel, T.accent, lvHover ? 2 : 1);
+  text(ctx, `⬆ 主基地 Lv.${state.base.level} ${state.base.level < 5 ? "(升级)" : "(满级)"}`, ox + pad + 4, cr.y + 37, {
     size: T.fontSm, color: state.base.level < 5 ? T.accent : T.textDim, weight: "700",
   });
   if (lvHover && ui.pointer.pressed && state.base.level < 5) {
@@ -47,20 +49,20 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
   }
 
   // 引导横幅(有提示才占位,无则返回0)
-  const guideH = drawGuideBanner(ctx, ui, state, 14, cr.y + 58, cr.w - 28);
+  const guideH = drawGuideBanner(ctx, ui, state, ox + pad - 2, cr.y + 58, cr.w - pad * 2 + 2);
 
   // 外出探索入口(紧凑横幅)
   const exploreY = cr.y + 58 + guideH;
-  drawExploreEntry(ctx, ui, state, 16, exploreY, cr.w - 32, 52);
+  drawExploreEntry(ctx, ui, state, ox + pad, exploreY, cr.w - pad * 2, 52);
 
   // 已建设施网格 + 建造面板: 统一放进可滚动区域,避免内容多时被底部导航遮挡
   const scrollY = exploreY + 60;
-  text(ctx, "已建设施", 16, scrollY, { size: T.fontMd, color: T.text, weight: "600" });
+  text(ctx, "已建设施", ox + pad, scrollY, { size: T.fontMd, color: T.text, weight: "600" });
   const scrollBoxY = scrollY + 22;
   const scrollBoxH = cr.y + cr.h - scrollBoxY - 8; // 内容区底部,不侵入导航栏
 
   const facs = state.base.facilities;
-  const cardW = Math.min(220, (cr.w - 32 - 12) / 2);
+  const cardW = Math.min(220, (cr.w - pad * 2 - 12) / 2);
   const cardH = 96;
 
   // 先算总内容高度(设施网格 + 建造面板)
@@ -71,18 +73,18 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
   const maxScroll = Math.max(0, contentTotalH - scrollBoxH);
 
   // 滚轮
-  if (inRect(ui.pointer.x, ui.pointer.y, 12, scrollBoxY, cr.w - 24, scrollBoxH)) {
+  if (inRect(ui.pointer.x, ui.pointer.y, ox + pad - 4, scrollBoxY, cr.w - pad * 2 + 8, scrollBoxH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
     if (wheel) state._baseScroll = Math.max(0, Math.min(maxScroll, (state._baseScroll || 0) + wheel * 0.5));
   }
   const yOff = state._baseScroll || 0;
 
-  clipRound(ctx, 12, scrollBoxY, cr.w - 24, scrollBoxH, T.radius, () => {
-    let gx = 16;
+  clipRound(ctx, ox + pad - 4, scrollBoxY, cr.w - pad * 2 + 8, scrollBoxH, T.radius, () => {
+    let gx = ox + pad;
     let gy = scrollBoxY - yOff;
     facs.forEach((fac) => {
-      if (gx + cardW > cr.w - 16) {
-        gx = 16;
+      if (gx + cardW > ox + cr.w - pad) {
+        gx = ox + pad;
         gy += cardH + 8;
       }
       drawFacilityCard(ctx, ui, state, fac, gx, gy, cardW, cardH);
@@ -90,12 +92,12 @@ export function drawBaseScreen(ctx, state, ui, W, H) {
     });
     // 建造面板紧跟设施网格之后
     const buildY = gy + cardH + 20;
-    drawBuildPanel(ctx, ui, state, 16, buildY, cr.w - 32, buildPanelH);
+    drawBuildPanel(ctx, ui, state, ox + 16, buildY, cr.w - 32, buildPanelH);
   });
 
   // 滚动条(溢出时)
   if (maxScroll > 0) {
-    const trackX = cr.w - 8;
+    const trackX = ox + cr.w - 8;
     fillRoundRect(ctx, trackX, scrollBoxY, 3, scrollBoxH, 1.5, T.panelLine);
     const thumbH = Math.max(30, (scrollBoxH / contentTotalH) * scrollBoxH);
     const thumbY = scrollBoxY + (yOff / maxScroll) * (scrollBoxH - thumbH);

@@ -42,22 +42,23 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
     }
   }
 
-  text(ctx, "🚀 派遣探索", 16, cr.y + 8, { size: T.fontLg, color: T.text, weight: "700" });
+  const ox = cr.x; // 内容区x偏移(宽屏侧栏右侧)
+  text(ctx, "🚀 派遣探索", ox + 16, cr.y + 8, { size: T.fontLg, color: T.text, weight: "700" });
   const disc = allDiscoveredPois(state);
-  text(ctx, `已发现 ${disc.length} 个地点可探索`, 16, cr.y + 34, {
+  text(ctx, `已发现 ${disc.length} 个地点可探索`, ox + 16, cr.y + 34, {
     size: T.fontSm,
     color: T.textDim,
   });
 
   // 引导横幅
-  const guideH = drawGuideBanner(ctx, ui, state, 14, cr.y + 56, cr.w - 28);
+  const guideH = drawGuideBanner(ctx, ui, state, ox + 14, cr.y + 56, cr.w - 28);
 
   // 列表区: 进行中 + 完成 + 可派遣区域,整体放进可滚动容器,避免溢出被导航栏遮挡
   const listBoxY = cr.y + 62 + guideH;
   const listBoxH = cr.y + cr.h - listBoxY - 8;
 
   // 滚轮
-  if (inRect(ui.pointer.x, ui.pointer.y, 12, listBoxY, cr.w - 24, listBoxH)) {
+  if (inRect(ui.pointer.x, ui.pointer.y, ox + 12, listBoxY, cr.w - 24, listBoxH)) {
     const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
     if (wheel) state._dispatchScroll = Math.max(0, (state._dispatchScroll || 0) + wheel * 0.5);
   }
@@ -69,37 +70,34 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
   let totalH = 0;
   if (running.length) totalH += 22 + running.length * 70;
   if (done.length) totalH += 28 + done.length * 62;
-  totalH += 32; // "可探索区域"标题
+  totalH += 32;
   if (disc.length === 0) totalH += 80;
   else totalH += disc.length * 84;
   const maxScroll = Math.max(0, totalH - listBoxH);
   state._dispatchScroll = Math.min(state._dispatchScroll || 0, maxScroll);
   const yOff = state._dispatchScroll || 0;
 
-  clipRound(ctx, 12, listBoxY, cr.w - 24, listBoxH, T.radius, () => {
+  clipRound(ctx, ox + 12, listBoxY, cr.w - 24, listBoxH, T.radius, () => {
     let yy = listBoxY - yOff;
-    // 进行中的探索
     if (running.length) {
-      text(ctx, "进行中", 16, yy, { size: T.fontSm, color: T.info, weight: "700" });
+      text(ctx, "进行中", ox + 16, yy, { size: T.fontSm, color: T.info, weight: "700" });
       yy += 22;
       for (const e of running) {
-        drawExpeditionCard(ctx, ui, state, e, 12, yy, cr.w - 24, 64);
+        drawExpeditionCard(ctx, ui, state, e, ox + 12, yy, cr.w - 24, 64);
         yy += 70;
       }
     }
-    // 完成待领
     if (done.length) {
       yy += 6;
-      text(ctx, "✅ 探索完成(点击查看)", 16, yy, { size: T.fontSm, color: T.accent, weight: "700" });
+      text(ctx, "✅ 探索完成(点击查看)", ox + 16, yy, { size: T.fontSm, color: T.accent, weight: "700" });
       yy += 22;
       for (const e of done) {
-        drawExpeditionCard(ctx, ui, state, e, 12, yy, cr.w - 24, 56, true);
+        drawExpeditionCard(ctx, ui, state, e, ox + 12, yy, cr.w - 24, 56, true);
         yy += 62;
       }
     }
-    // 可派遣区域
     yy += 8;
-    text(ctx, "📍 可探索区域", 16, yy, { size: T.fontSm, color: T.textDim, weight: "700" });
+    text(ctx, "📍 可探索区域", ox + 16, yy, { size: T.fontSm, color: T.textDim, weight: "700" });
     yy += 24;
 
     if (disc.length === 0) {
@@ -116,14 +114,14 @@ export function drawDispatchScreen(ctx, state, ui, W, H) {
     // POI 卡片
     let cy = yy;
     for (const poi of disc) {
-      drawRegionCard(ctx, ui, state, poi, 12, cy, cr.w - 24, 78);
+      drawRegionCard(ctx, ui, state, poi, ox + 12, cy, cr.w - 24, 78);
       cy += 84;
     }
   });
 
   // 滚动条
   if (maxScroll > 0) {
-    const trackX = cr.w - 8;
+    const trackX = ox + cr.w - 8;
     fillRoundRect(ctx, trackX, listBoxY, 3, listBoxH, 1.5, T.panelLine);
     const thumbH = Math.max(30, (listBoxH / totalH) * listBoxH);
     const thumbY = listBoxY + (yOff / maxScroll) * (listBoxH - thumbH);

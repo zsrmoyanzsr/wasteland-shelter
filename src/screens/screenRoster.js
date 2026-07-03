@@ -20,17 +20,18 @@ import { drawAvatar } from "../ui/avatar.js";
 
 export function drawRosterScreen(ctx, state, ui, W, H) {
   const cr = contentRect(W, H);
+  const ox = cr.x; // 内容区x偏移(宽屏侧栏右侧)
 
   const pop = state.survivors.filter((s) => s.busy !== "dead").length;
   const cap = populationCap(state.base.level);
-  text(ctx, "🧑 幸存者名册", 16, cr.y + 8, { size: T.fontLg, color: T.text, weight: "700" });
-  text(ctx, `${pop}/${cap} 人 · 升级基地可扩容`, 16, cr.y + 34, {
+  text(ctx, "🧑 幸存者名册", ox + 16, cr.y + 8, { size: T.fontLg, color: T.text, weight: "700" });
+  text(ctx, `${pop}/${cap} 人 · 升级基地可扩容`, ox + 16, cr.y + 34, {
     size: T.fontSm,
     color: T.textDim,
   });
 
   // 列表(可滚动: 鼠标滚轮)
-  const listX = 12;
+  const listX = ox + 12;
   const listY = cr.y + 62;
   const listW = cr.w - 24;
   const listH = cr.h - 62;

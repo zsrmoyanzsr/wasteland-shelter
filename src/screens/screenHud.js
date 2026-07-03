@@ -38,14 +38,14 @@ export function isWideLayout() {
 
 // 计算内容区域
 // 窄屏: 扣除顶部条+底部导航,内容占满宽度
-// 宽屏: 扣除顶部条+左侧栏,内容从侧栏右侧开始,更宽更舒适
+// 宽屏: 扣除顶部条+左侧栏,内容从侧栏右侧开始,底部留16px呼吸空间(无底部导航天然留白)
 export function contentRect(W, H) {
   if (isWideLayout()) {
     return {
       x: SIDEBAR_W,
       y: HUD_TOP_H,
       w: W - SIDEBAR_W,
-      h: H - HUD_TOP_H,
+      h: H - HUD_TOP_H - 16, // 宽屏无底部导航,主动留底部留白避免内容贴屏幕底
     };
   }
   return {
