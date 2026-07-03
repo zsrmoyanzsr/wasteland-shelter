@@ -23,6 +23,7 @@ import { markDispatched } from "../engine/guide.js";
 import { rollItemDrops } from "../content/items.js";
 import { itemDef } from "../content/items.js";
 import { addItems } from "../engine/inventory.js";
+import { getEquipStats } from "../engine/equipEngine.js";
 import { drawGuideBanner } from "../ui/guideBanner.js";
 
 // 派遣持续时间(秒): 远的(danger高)明显更久,形成"刷近快速 vs 赌远高回报"取舍
@@ -474,6 +475,9 @@ function settleExpedition(state, e) {
         const skillVal = (m.skills && m.skills[rs.skill]) || 0;
         if (hasPerk) bonus += rs.perkBonus;
         bonus += skillVal * rs.perSkill;
+        // 装备属性加成
+        const eqStat = getEquipStats(state, m.id);
+        if (eqStat[rs.skill]) bonus += eqStat[rs.skill] * rs.perSkill;
       }
       amt *= 1 + bonus;
     }
