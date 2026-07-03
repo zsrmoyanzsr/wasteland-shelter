@@ -260,13 +260,22 @@ export function drawDetailModal(ctx, ui, state, W, H) {
     yy += 36;
   }
 
-  // 按钮
+  // 按钮: 分配工作 + 解雇(并排)
   const by = my + mh - 56;
-  if (button(ctx, ui, mx + 24, by, mw - 48, 40, fac ? "🔁 重新分配" : "👷 分配工作", {
+  const canFire = s.busy !== "expedition" && state.survivors.filter(x => x.busy !== "dead").length > 1;
+  if (button(ctx, ui, mx + 24, by, (mw - 48) * 0.65, 40, fac ? "🔁 重新分配" : "👷 分配工作", {
     fontSize: T.fontSm,
     disabled: s.busy === "expedition",
   })) {
     state.modal = { type: "assignSurvivor", survivorId: s.id };
+  }
+  if (button(ctx, ui, mx + 24 + (mw - 48) * 0.65 + 8, by, (mw - 48) * 0.35 - 8, 40, "🚪 解雇", {
+    fontSize: T.fontSm,
+    color: T.panelHi,
+    textColor: T.danger,
+    disabled: !canFire,
+  })) {
+    state.modal = { type: "fireConfirm", survivorId: s.id };
   }
   if (button(ctx, ui, mx + mw - 60, my + 12, 36, 30, "✕", {
     fontSize: T.fontMd,
@@ -388,4 +397,43 @@ function rgba(hex, a) {
 function drawBackdrop(ctx, W, H) {
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, 0, W, H);
+}
+
+// 解雇确认模态
+export function drawFireConfirmModal(ctx, ui, state, W, H) {
+  const m = state.modal;
+  const s = state.survivors.find(x => x.id === m.survivorId);
+  if (!s) { state.modal = null; return; }
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  ctx.fillRect(0, 0, W, H);
+  const mw = 320, mh = 240;
+  const mx = (W - mw) / 2, my = (H - mh) / 2;
+  fillRoundRect(ctx, mx, my, mw, mh, T.radiusLg, T.panel, T.danger, 2);
+  icon(ctx, "🚪", mx + mw / 2, my + 36, 30);
+  text(ctx, `解雇 ${s.name}?`, mx + mw / 2, my + 62, { size: T.fontLg, color: T.text, align: "center", weight: "700" });
+  text(ctx, `${s.profName} Lv.${s.level} 将永久离开避难所。`, mx + mw / 2, my + 88, { size: T.fontXs, color: T.textDim, align: "center" });
+  text(ctx, "其装备的神器会放回仓库。此操作不可撤销。", mx + mw / 2, my + 106, { size: T.fontXs, color: T.danger, align: "center" });
+  const by = my + mh - 52;
+  if (button(ctx, ui, mx + 24, by, 130, 40, "确认解雇", { fontSize: T.fontSm, color: T.danger, glow: true })) {
+    // 归还装备
+    if (state.equipment?.equipped?.[s.id]) {
+      const eq = state.equipment.equipped[s.id];
+      for (const slot of ["slot0", "slot1"]) {
+        if (eq[slot]) state.equipment.storage.push(eq[slot]);
+      }
+      delete state.equipment.equipped[s.id];
+    }
+    // 从设施移除分配
+    if (s.assigned) {
+      const fac = state.base.facilities.find(f => f.id === s.assigned);
+      if (fac) fac.assigned = fac.assigned.filter(id => id !== s.id);
+    }
+    // 移除幸存者
+    state.survivors = state.survivors.filter(x => x.id !== s.id);
+    addLog(state, `${s.name} 离开了避难所。`, "#9aa1b0");
+    state.modal = null;
+  }
+  if (button(ctx, ui, mx + mw - 154, by, 130, 40, "取消", { fontSize: T.fontSm, color: T.panelHi, textColor: T.text })) {
+    state.modal = null;
+  }
 }

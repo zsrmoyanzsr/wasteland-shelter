@@ -192,10 +192,18 @@ export function drawInventoryModal(ctx, ui, state, W, H) {
         if (cx + cardW > mx + mw - 14) { cx = mx + 14; cy += 56; }
         const id = g.items[i];
         const it = ITEMS[id];
-        fillRoundRect(ctx, cx, cy, cardW - 6, 48, T.radiusSm, T.panelAlt, T.panelLine, 1);
+        const usable = it.cat === "consumable" && it.use;
+        const cardHover = usable && inRect(ui.pointer.x, ui.pointer.y, cx, cy, cardW - 6, 48);
+        fillRoundRect(ctx, cx, cy, cardW - 6, 48, T.radiusSm, cardHover ? T.panelHi : T.panelAlt, usable ? T.primary : T.panelLine, cardHover ? 2 : 1);
         icon(ctx, it.icon, cx + 18, cy + 18, 18);
         text(ctx, it.name, cx + 34, cy + 8, { size: 10, color: T.text, weight: "600" });
         text(ctx, "×" + inv[id], cx + 34, cy + 26, { size: T.fontXs, color: T.accent, weight: "700" });
+        if (usable) text(ctx, "可使用", cx + cardW - 12, cy + 8, { size: 9, color: T.primary, align: "right" });
+        // 点击消耗品→选幸存者使用
+        if (cardHover && ui.pointer.pressed) {
+          state.modal = { type: "useItem", itemId: id };
+          ui.pointer.pressed = false;
+        }
         cx += cardW;
       }
       cy += 64;
@@ -345,4 +353,65 @@ export function drawThreatModal(ctx, ui, state, W, H) {
   text(ctx, "居民生命最低降到1,绝不致死 — 但不及时治疗会虚弱", mx + mw / 2, my + mh - 24, {
     size: 10, color: T.textMute, align: "center",
   });
+}
+
+// 使用消耗品模态: 选择目标幸存者使用消耗品
+import { useConsumable } from "../engine/inventory.js";
+
+export function drawUseItemModal(ctx, ui, state, W, H) {
+  const m = state.modal;
+  const it = ITEMS[m.itemId];
+  if (!it) { state.modal = null; return; }
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  ctx.fillRect(0, 0, W, H);
+  const mw = Math.min(340, W - 24);
+  const mh = Math.min(440, H - 40);
+  const mx = (W - mw) / 2;
+  const my = (H - mh) / 2;
+  fillRoundRect(ctx, mx, my, mw, mh, T.radiusLg, T.panel, T.primary, 2);
+  icon(ctx, it.icon, mx + mw / 2, my + 30, 28);
+  text(ctx, `使用 ${it.name}`, mx + mw / 2, my + 56, { size: T.fontMd, color: T.text, align: "center", weight: "700" });
+  text(ctx, it.desc, mx + mw / 2, my + 76, { size: T.fontXs, color: T.textDim, align: "center" });
+  text(ctx, `选择目标幸存者 (拥有 ${state.inventory?.[m.itemId] || 0} 个)`, mx + mw / 2, my + 94, { size: T.fontXs, color: T.accent, align: "center" });
+
+  const listY = my + 112;
+  const listH = mh - 112 - 56;
+  if (inRect(ui.pointer.x, ui.pointer.y, mx, listY, mw, listH)) {
+    const drag = ui.consumeDragScroll ? ui.consumeDragScroll() : 0;
+    const wheel = ui.consumeWheel ? ui.consumeWheel() : 0;
+    if (wheel || drag) state._useItemScroll = Math.max(0, (state._useItemScroll || 0) + wheel * 0.5 + drag);
+  }
+  const survivors = state.survivors.filter(s => s.busy !== "dead" && s.health < s.maxHealth);
+  const itemH = 50;
+  const totalH = survivors.length * (itemH + 6);
+  const maxScroll = Math.max(0, totalH - listH);
+  state._useItemScroll = Math.min(state._useItemScroll || 0, maxScroll);
+  const yOff = state._useItemScroll || 0;
+
+  clipRound(ctx, mx + 8, listY, mw - 16, listH, T.radiusSm, () => {
+    if (survivors.length === 0) {
+      text(ctx, "所有幸存者都满血了", mx + mw / 2, listY + 30, { size: T.fontSm, color: T.textMute, align: "center" });
+      return;
+    }
+    let cy = listY - yOff;
+    for (const sv of survivors) {
+      const hover = inRect(ui.pointer.x, ui.pointer.y, mx + 12, cy, mw - 24, itemH);
+      fillRoundRect(ctx, mx + 12, cy, mw - 24, itemH, T.radiusSm, hover ? T.panelHi : T.panelAlt, hover ? T.primary : T.panelLine, hover ? 2 : 1);
+      text(ctx, sv.name, mx + 30, cy + 8, { size: T.fontSm, color: T.text, weight: "600" });
+      text(ctx, `${sv.profName} Lv.${sv.level}`, mx + 30, cy + 26, { size: T.fontXs, color: T.textDim });
+      text(ctx, `❤️${Math.floor(sv.health)}/${sv.maxHealth}`, mx + mw - 30, cy + 8, { size: T.fontXs, color: sv.health < 30 ? T.danger : sv.health < 60 ? T.accent : T.primary, align: "right", weight: "600" });
+      if (hover && ui.pointer.pressed) {
+        const result = useConsumable(state, m.itemId, sv);
+        if (result) {
+          state.modal = null;
+          ui.pointer.pressed = false;
+        }
+      }
+      cy += itemH + 6;
+    }
+  });
+
+  if (button(ctx, ui, mx + mw / 2 - 60, my + mh - 44, 120, 34, "取消", { fontSize: T.fontSm })) {
+    state.modal = null;
+  }
 }
