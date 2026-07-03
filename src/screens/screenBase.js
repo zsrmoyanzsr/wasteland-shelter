@@ -33,12 +33,12 @@ const CATS = [
 export function drawBaseScreen(ctx, state, ui, W, H) {
   const cr = contentRect(W, H);
 
-  // 标题
-  text(ctx, "🏠 避难所基地", 16, cr.y + 8, { size: T.fontLg, color: T.text, weight: "700" });
-  // 基地等级(可点升级)
-  const lvHover = inRect(ui.pointer.x, ui.pointer.y, 16, cr.y + 30, 150, 24);
-  fillRoundRect(ctx, 14, cr.y + 28, 154, 26, T.radiusSm, lvHover ? T.panelHi : T.panel, T.accent, lvHover ? 2 : 1);
-  text(ctx, `⬆ 主基地 Lv.${state.base.level} ${state.base.level < 5 ? "(升级)" : "(满级)"}`, 20, cr.y + 35, {
+  // 标题(字号略小避免和下方等级按钮挤)
+  text(ctx, "🏠 避难所基地", 16, cr.y + 6, { size: T.fontMd, color: T.text, weight: "700" });
+  // 基地等级(可点升级) — 下移到 cr.y+30 避免和标题底部重叠
+  const lvHover = inRect(ui.pointer.x, ui.pointer.y, 16, cr.y + 32, 150, 24);
+  fillRoundRect(ctx, 14, cr.y + 30, 154, 26, T.radiusSm, lvHover ? T.panelHi : T.panel, T.accent, lvHover ? 2 : 1);
+  text(ctx, `⬆ 主基地 Lv.${state.base.level} ${state.base.level < 5 ? "(升级)" : "(满级)"}`, 20, cr.y + 37, {
     size: T.fontSm, color: state.base.level < 5 ? T.accent : T.textDim, weight: "700",
   });
   if (lvHover && ui.pointer.pressed && state.base.level < 5) {
