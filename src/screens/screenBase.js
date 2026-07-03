@@ -365,30 +365,23 @@ function drawFacilityCard(ctx, ui, state, fac, x, y, w, h) {
     align: "right",
   });
 
-  // 产出信息
-  let infoY = y + 62;
+  // 产出+消耗合并一行(避免和升级按钮挤)
+  let infoY = y + 54;
   const prod = facilityStats(fac.type, fac.level);
   let prodText = "";
   for (const k in prod.produces) {
     const r = RESOURCES[k];
-    if (r) prodText += `${r.icon}+${(prod.produces[k]).toFixed(1)}/s `;
+    if (r) prodText += `${r.icon}+${(prod.produces[k]).toFixed(1)} `;
+  }
+  for (const k in prod.consumes) {
+    const r = RESOURCES[k];
+    if (r) prodText += `${r.icon}-${(prod.consumes[k]).toFixed(2)} `;
   }
   text(ctx, prodText.trim() || "—", x + 12, infoY, {
     size: T.fontXs,
     color: T.primary,
     weight: "600",
   });
-  let consText = "";
-  for (const k in prod.consumes) {
-    const r = RESOURCES[k];
-    if (r) consText += `${r.icon}-${(prod.consumes[k]).toFixed(2)}/s `;
-  }
-  if (consText) {
-    text(ctx, consText.trim(), x + 12, infoY + 16, {
-      size: T.fontXs,
-      color: T.textMute,
-    });
-  }
 
   // 升级按钮
   const maxed = fac.level >= def.maxLevel;
